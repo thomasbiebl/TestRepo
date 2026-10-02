@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup 4 – Ticket</title>
+<style>
+:root{--red:#DC052D;--blue:#0066B2;--navy:#0B1D3A;--bg:#EEF1F6;--muted:#6B7686}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#d9dde4;color:var(--navy)}
+h1.t{text-align:center;font-size:18px;margin:16px 0 4px}p.s{text-align:center;color:var(--muted);margin:0 0 16px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:0 16px 32px}
+.phone{width:390px;height:780px;background:var(--bg);border-radius:32px;border:8px solid #111;overflow:hidden;display:flex;flex-direction:column}
+.hdr{background:linear-gradient(135deg,var(--red),var(--blue));color:#fff;padding:22px 18px 26px;border-radius:0 0 24px 24px}.hdr small{opacity:.85}.hdr h2{margin:2px 0 0;font-size:24px}
+.body{flex:1;overflow:auto;padding:16px}
+.ticket{background:#fff;border-radius:16px;margin-bottom:16px;position:relative;box-shadow:0 4px 12px rgba(11,29,58,.1);overflow:hidden}
+.ticket .main{padding:16px 16px 14px;border-bottom:2px dashed #d5dae2;position:relative}
+.ticket .main:before,.ticket .main:after{content:"";position:absolute;bottom:-11px;width:20px;height:20px;border-radius:50%;background:var(--bg)}.ticket .main:before{left:-10px}.ticket .main:after{right:-10px}
+.ticket .stub{padding:14px 16px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.ticket h3{margin:6px 0 4px;font-size:19px}.route{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;color:#fff;background:var(--red)}.badge.b{background:var(--blue)}.badge.g{background:#8d97a5}.badge.ok{background:#1e9e5a}
+.seats{font-weight:800;font-size:22px;color:var(--navy)}.seats small{font-size:12px;font-weight:600;color:var(--muted)}
+.tabs{display:flex;background:#fff}.tabs div{flex:1;text-align:center;padding:10px 0 12px;font-size:11px;color:var(--muted)}.tabs div.on{color:var(--red);font-weight:700}.tabs b{display:block;font-size:20px}
+.btn{display:block;border-radius:12px;padding:15px;font-size:16px;font-weight:700;color:#fff;background:var(--red);margin-top:10px;text-align:center}.btn.b{background:var(--blue)}.btn.ghost{background:#fff;color:var(--navy);border:2px solid #d5dae2}
+.tl{display:flex;margin:14px 0 4px}.tl div{flex:1;text-align:center;font-size:11px;color:var(--muted);position:relative}.tl div:before{content:"";display:block;width:16px;height:16px;border-radius:50%;background:#c9d0da;margin:0 auto 6px}
+.tl div.on:before{background:var(--red);box-shadow:0 0 0 4px rgba(220,5,45,.2)}.tl div.done:before{background:var(--blue)}.tl div.on{color:var(--navy);font-weight:700}
+.qr{width:96px;height:96px;background:repeating-conic-gradient(var(--navy) 0 25%,#fff 0 50%) 0 0/16px 16px;border-radius:8px;margin:10px auto}
+.kpis{display:flex;gap:10px;margin-bottom:14px}.kpis div{flex:1;background:#fff;border-radius:14px;padding:12px;text-align:center;box-shadow:0 2px 6px rgba(11,29,58,.06)}.kpis b{display:block;font-size:24px;color:var(--blue)}.kpis span{font-size:12px;color:var(--muted)}
+.u{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #eef0f3;font-size:14px}.u:last-child{border:0}
+</style></head><body>
+<h1 class="t">Mockup 4 – Ticket</h1><p class="s">Fahrten als Tickets mit Abriss-Kante, Verlauf von Rot nach Blau</p>
+<div class="row">
+
+<div class="phone"><div class="hdr"><small>Servus Thomas · Mitglied</small><h2>Deine Busfahrten</h2></div>
+<div class="body">
+<div class="ticket"><div class="main"><span class="badge">INTERESSE · MITGLIEDER</span><h3>Augsburg</h3><div class="route">Sa 14.11. · 11:00 · Parkplatz Stadion</div></div>
+<div class="stub"><span>noch 1 T 6 Std</span><span class="seats">32 <small>/ 50 Interessenten</small></span></div></div>
+<div class="ticket"><div class="main"><span class="badge b">OFFENE BUCHUNG</span><h3>Leipzig</h3><div class="route">Sa 05.12. · 06:30 · Parkplatz Stadion</div></div>
+<div class="stub"><span>Jetzt buchen</span><span class="seats">9 <small>Plätze frei</small></span></div></div>
+<div class="ticket"><div class="main"><span class="badge g">AUSGEBUCHT</span><h3>Dortmund</h3><div class="route">Sa 19.12. · 07:00 · Parkplatz Stadion</div></div>
+<div class="stub"><span>Warteliste</span><span class="seats">4 <small>wartend</small></span></div></div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Tickets</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="hdr"><small>‹ Fahrten</small><h2>Augsburg</h2></div>
+<div class="body">
+<div class="ticket"><div class="main"><span class="badge">PHASE 1</span><h3>Interesse bekunden</h3>
+<div class="tl"><div class="on">Interesse<br>3 Tage</div><div>Vergabe<br>automatisch</div><div>Offene<br>Buchung</div></div></div>
+<div class="stub"><span>Endet in</span><span class="seats">1 T 6 Std</span></div></div>
+<div class="ticket"><div class="main"><b>Deine Chancen</b><div class="route" style="margin-top:6px">17 bisherige Fahrten · Rang 4 von 32 Interessenten · 50 Plätze – du bist sicher dabei.</div></div>
+<div class="stub"><span>28 € pro Person</span><span>11:00 · Sa 14.11.</span></div></div>
+<div class="btn">Interesse bekunden</div><div class="btn ghost">Zurückziehen</div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Tickets</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="hdr"><small>Admin</small><h2>Verwaltung</h2></div>
+<div class="body">
+<div class="kpis"><div><b>3</b><span>Fahrten</span></div><div><b>126</b><span>Benutzer</span></div><div><b>84</b><span>Mitglieder</span></div></div>
+<div class="btn b" style="margin:0 0 14px">+ Neue Fahrt erstellen</div>
+<div class="ticket"><div class="main"><b>Benutzer</b>
+<div class="u"><span>Max Huber · 23</span><span class="badge ok">Mitglied</span></div><div class="u"><span>Anna Maier · 17</span><span class="badge ok">Mitglied</span></div><div class="u"><span>Lukas Weiß · 2</span><span class="badge g">Gast</span></div></div>
+<div class="stub"><span>Alle Benutzer anzeigen</span><span>›</span></div></div>
+</div>
+<div class="tabs"><div><b>🚌</b>Fahrten</div><div><b>🎫</b>Tickets</div><div><b>👤</b>Profil</div><div class="on"><b>⚙️</b>Admin</div></div></div>
+
+</div></body></html>
