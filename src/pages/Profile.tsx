@@ -1,20 +1,55 @@
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/ui';
+import { buildMyExport } from '../domain/exports';
 import { pastTripCount } from '../domain/rules';
+import { downloadFile } from '../lib/download';
 import { useApp } from '../state/AppContext';
 import { THEMES } from '../themes';
 import { useTheme } from '../themes/ThemeProvider';
 
 export function Profile() {
-  const { snap, user, now, auth, setSessionUser } = useApp();
+  const { snap, user, now, auth, data, act, notify, setSessionUser } = useApp();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
+  const [name, setName] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
+  const [pwError, setPwError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
   if (!snap || !user) return null;
 
-  const logout = () => {
+  const leave = () => {
     auth.logout();
     setSessionUser(null);
     nav('/login', { replace: true });
+  };
+
+  const saveName = async (e: FormEvent) => {
+    e.preventDefault();
+    if (await act(() => data.updateMyName(user.id, name ?? user.name), 'Name gespeichert.')) setName(null);
+  };
+
+  const savePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    const res = await auth.updatePassword(password);
+    if (!res.ok) return setPwError(res.error);
+    setPwError('');
+    setPassword('');
+    notify('Passwort geändert.');
+  };
+
+  const exportData = () => {
+    const file = JSON.stringify(buildMyExport(snap, user), null, 2);
+    downloadFile('meine-daten.json', file, 'application/json');
+  };
+
+  const deleteAccount = async () => {
+    const res = await data.deleteMyAccount(user.id);
+    if (!res.ok) {
+      setConfirmDelete(false);
+      return notify(res.error);
+    }
+    leave();
   };
 
   return (
@@ -31,6 +66,21 @@ export function Profile() {
           <p className="muted">Bisherige Fahrten: <b>{pastTripCount(user, snap.trips, snap.bookings, now)}</b></p>
         </section>
 
+        <form className="card form" onSubmit={saveName}>
+          <h3>Name ändern</h3>
+          <label htmlFor="p-name">Name</label>
+          <input id="p-name" required value={name ?? user.name} onChange={(e) => setName(e.target.value)} />
+          <button className="btn ghost" disabled={name === null || name.trim() === user.name}>Name speichern</button>
+        </form>
+
+        <form className="card form" onSubmit={savePassword}>
+          <h3>Passwort ändern</h3>
+          <label htmlFor="p-pw">Neues Passwort (mind. 6 Zeichen)</label>
+          <input id="p-pw" type="password" autoComplete="new-password" minLength={6} required value={password} onChange={(e) => setPassword(e.target.value)} />
+          {pwError && <p className="error" role="alert">{pwError}</p>}
+          <button className="btn ghost">Passwort speichern</button>
+        </form>
+
         <section className="card">
           <h3>Design</h3>
           <div className="themes" role="radiogroup" aria-label="Design">
@@ -46,7 +96,26 @@ export function Profile() {
           </div>
         </section>
 
-        <button className="btn ghost" onClick={logout}>Abmelden</button>
+        <section className="card">
+          <h3>Deine Daten</h3>
+          <p className="muted">Lade alles herunter, was wir über dich gespeichert haben.</p>
+          <button className="btn ghost" onClick={exportData}>Meine Daten herunterladen</button>
+        </section>
+
+        <button className="btn ghost" onClick={leave}>Abmelden</button>
+
+        <section className="card danger-zone">
+          <h3>Konto löschen</h3>
+          <p className="muted">Dein Konto und alle deine Buchungen werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+          {confirmDelete ? (
+            <div className="chips">
+              <button className="chip danger" onClick={() => void deleteAccount()}>Ja, Konto endgültig löschen</button>
+              <button className="chip" onClick={() => setConfirmDelete(false)}>Abbrechen</button>
+            </div>
+          ) : (
+            <button className="chip" onClick={() => setConfirmDelete(true)}>Konto löschen …</button>
+          )}
+        </section>
       </div>
     </>
   );

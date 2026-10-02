@@ -1,3 +1,4 @@
+import type { Result } from '../data/DataService';
 import { hashPassword } from '../data/seed';
 import type { LocalStorageService } from '../data/localStorageService';
 import type { User } from '../domain/types';
@@ -61,6 +62,13 @@ export class LocalAuth implements AuthService {
     if (!stored.ok) return { ok: false as const, error: stored.error };
     this.setSession(user.id);
     return { ok: true as const, userId: user.id };
+  }
+
+  async updatePassword(password: string): Promise<Result> {
+    const id = this.currentUserId();
+    if (!id) return { ok: false, error: 'Bitte melde dich an.' };
+    if (password.length < 6) return { ok: false, error: 'Das Passwort braucht mindestens 6 Zeichen.' };
+    return this.data.setPasswordHash(id, await hashPassword(password));
   }
 
   logout() {

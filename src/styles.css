@@ -124,3 +124,4 @@ textarea { width: 100%; background: var(--surface-2); border: 1px solid var(--bo
 .news-teaser { gap: 2px; }
 .tab { position: relative; }
 .tab .dot { position: absolute; top: 6px; left: calc(50% + 10px); width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid var(--tabbar-bg); }
+.danger-zone { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); }

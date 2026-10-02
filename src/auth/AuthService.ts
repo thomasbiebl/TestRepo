@@ -15,9 +15,11 @@ export interface AuthService {
   >;
   logout(): void;
 
+  /** Sets a new password for the logged-in user. */
+  updatePassword(password: string): Promise<Result>;
+
   /** Optional: password reset by e-mail (not available in demo mode). */
   resetPassword?(email: string): Promise<Result>;
-  updatePassword?(password: string): Promise<Result>;
   /** Calls back when the user arrives through a password reset link. */
   onPasswordRecovery?(callback: () => void): () => void;
 }

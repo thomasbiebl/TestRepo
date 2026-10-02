@@ -72,6 +72,26 @@ export class LocalStorageService implements DataService {
       return { ...s, users: s.users.map((u) => (u.id === id ? { ...u, ...clean } : u)) };
     });
 
+  updateMyName: DataService['updateMyName'] = (id, name) =>
+    this.mutate((s) => {
+      const clean = name.trim();
+      if (!clean) return 'Bitte einen Namen angeben.';
+      return { ...s, users: s.users.map((u) => (u.id === id ? { ...u, name: clean } : u)) };
+    });
+
+  setPasswordHash = (id: string, passwordHash: string): Promise<Result> =>
+    this.mutate((s) => ({ ...s, users: s.users.map((u) => (u.id === id ? { ...u, passwordHash } : u)) }));
+
+  deleteMyAccount: DataService['deleteMyAccount'] = (id) =>
+    this.mutate((s) => {
+      const me = s.users.find((u) => u.id === id);
+      if (me?.isAdmin && !s.users.some((u) => u.isAdmin && u.id !== id)) {
+        return 'Du bist der einzige Admin. Ernenne zuerst jemand anderen zum Admin.';
+      }
+      const bookings = s.bookings.filter((b) => b.userId !== id);
+      return { ...s, users: s.users.filter((u) => u.id !== id), bookings: s.trips.reduce((acc, t) => promoteWaitlist(acc, t), bookings) };
+    });
+
   deleteUser: DataService['deleteUser'] = (id) =>
     this.mutate((s) => {
       const bookings = s.bookings.filter((b) => b.userId !== id);

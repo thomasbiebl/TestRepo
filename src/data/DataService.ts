@@ -16,6 +16,10 @@ export interface DataService {
 
   updateUser(id: string, patch: Partial<Pick<User, 'isMember' | 'isAdmin' | 'memberRequested' | 'baseTrips' | 'name'>>): Promise<Result>;
   deleteUser(id: string): Promise<Result>;
+  /** The logged-in user edits their own profile. */
+  updateMyName(userId: string, name: string): Promise<Result>;
+  /** The logged-in user deletes their own account and bookings. */
+  deleteMyAccount(userId: string): Promise<Result>;
 
   saveTrip(id: string | null, input: TripInput): Promise<Result>;
   deleteTrip(id: string): Promise<Result>;

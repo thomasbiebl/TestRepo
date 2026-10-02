@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buildMyExport } from '../src/domain/exports';
 import {
   allocateTrip, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
 } from '../src/domain/rules';
@@ -129,5 +130,18 @@ describe('settings', () => {
     expect(validateSettings({ ...DEFAULT_SETTINGS, interestDays: 31 })).not.toBeNull();
     expect(validateSettings({ ...DEFAULT_SETTINGS, defaultSeats: 0 })).not.toBeNull();
     expect(validateSettings({ ...DEFAULT_SETTINGS, clubName: '  ' })).not.toBeNull();
+  });
+});
+
+describe('data export', () => {
+  it('contains the profile and own bookings only', () => {
+    const me = user('a', { name: 'Anna', baseTrips: 4 });
+    const other = user('b');
+    const s = snap([me, other], [trip()], [booking('a', 'confirmed'), booking('b', 'confirmed')]);
+    const out = buildMyExport(s, me, new Date(T0));
+    expect(out.profile).toMatchObject({ name: 'Anna', tripsBeforeApp: 4 });
+    expect(out.bookings).toHaveLength(1);
+    expect(out.bookings[0]).toMatchObject({ trip: 'Augsburg', status: 'confirmed' });
+    expect(JSON.stringify(out)).not.toContain('passwordHash');
   });
 });

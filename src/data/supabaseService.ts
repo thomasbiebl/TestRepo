@@ -83,6 +83,10 @@ export class SupabaseService implements DataService {
 
   deleteUser: DataService['deleteUser'] = async (id) => fail((await this.sb.rpc('admin_delete_user', { p_user: id })).error);
 
+  updateMyName: DataService['updateMyName'] = async (_id, name) => fail((await this.sb.rpc('update_my_name', { p_name: name })).error);
+
+  deleteMyAccount: DataService['deleteMyAccount'] = async () => fail((await this.sb.rpc('delete_my_account')).error);
+
   saveTrip: DataService['saveTrip'] = async (id, input) => {
     const row = {
       title: input.title, departure: input.departure, meeting_point: input.meetingPoint, price: input.price, seats: input.seats,

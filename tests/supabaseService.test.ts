@@ -3,7 +3,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 import { SupabaseService } from '../src/data/supabaseService';
 
-const migration = readFileSync(new URL('../supabase/migrations/0001_init.sql', import.meta.url), 'utf8');
+import { readdirSync } from 'node:fs';
+const migrationDir = new URL('../supabase/migrations/', import.meta.url);
+const migration = readdirSync(migrationDir).filter((f) => f.endsWith('.sql')).sort().map((f) => readFileSync(new URL(f, migrationDir), 'utf8')).join('\n');
 
 /** A recording stand-in for the Supabase client, so we can check what the service asks for. */
 function fakeClient(tables: Record<string, unknown[]>, loggedIn = true) {
@@ -63,8 +65,10 @@ describe('SupabaseService', () => {
     await svc.cancel('t1', 'u1');
     await svc.endInterestNow('t1');
     await svc.deleteUser('u2');
+    await svc.updateMyName('u1', 'Neu');
+    await svc.deleteMyAccount('u1');
     const rpcs = calls.filter((c) => c.startsWith('rpc ')).map((c) => /^rpc (\w+) (.*)$/.exec(c)!);
-    expect(rpcs.length).toBe(4);
+    expect(rpcs.length).toBe(6);
     for (const [, fn, args] of rpcs) {
       const decl = new RegExp(`create function public\\.${fn}\\(([^)]*)\\)`).exec(migration);
       expect(decl, `function ${fn} exists in migration`).not.toBeNull();

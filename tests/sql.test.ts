@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -6,7 +6,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
  * Runs the Supabase migration against an in-memory Postgres and checks the server-side rules
  * (booking, allocation, waiting list, access control) the same way the app uses them.
  */
-const migration = readFileSync(new URL('../supabase/migrations/0001_init.sql', import.meta.url), 'utf8');
+const dir = new URL('../supabase/migrations/', import.meta.url);
+const migrations = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort().map((f) => readFileSync(new URL(f, dir), 'utf8'));
 
 // Minimal stand-ins for what Supabase provides: roles, auth.users and auth.uid().
 const supabaseStub = `
@@ -59,7 +60,7 @@ const endInterest = (trip: string) => db.query(`update trips set interest_ends_a
 beforeAll(async () => {
   db = new PGlite();
   await db.exec(supabaseStub);
-  await db.exec(migration);
+  for (const m of migrations) await db.exec(m);
 }, 60_000);
 afterAll(() => db.close());
 
@@ -161,6 +162,28 @@ describe('accounts', () => {
     await db.query(`insert into auth.users (id, email) values (gen_random_uuid(), 'oauth@x.de')`);
     const { rows } = await db.query(`select name, member_requested from profiles where email = 'oauth@x.de'`);
     expect(rows).toEqual([{ name: 'oauth', member_requested: false }]);
+  });
+});
+
+describe('own profile', () => {
+  it('lets users change their own name, and nothing else', async () => {
+    await as('anna', `select update_my_name('Anna Neu')`);
+    expect((await db.query(`select name from profiles where id = $1`, [ids.anna])).rows[0]).toEqual({ name: 'Anna Neu' });
+    expect(await asErr('anna', `select update_my_name('  ')`)).toMatch(/Namen/);
+  });
+
+  it('deletes the own account with bookings and promotes the waiting list', async () => {
+    const trip = await addTrip(1);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await endInterest(trip);
+    await as('lukas', `select book_trip($1)`, [trip]);
+    await as('anna', `select delete_my_account()`);
+    expect((await db.query(`select count(*)::int as n from profiles where id = $1`, [ids.anna])).rows[0]).toEqual({ n: 0 });
+    expect(await statuses(trip)).toEqual({ lukas: 'confirmed' });
+  });
+
+  it('keeps the last admin from deleting the account', async () => {
+    expect(await asErr('admin', `select delete_my_account()`)).toMatch(/einzige Admin/);
   });
 });
 
