@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildMyExport } from '../src/domain/exports';
+import { deriveAudit } from '../src/domain/audit';
 import { buildIcs } from '../src/domain/ics';
 import { deriveNotifications } from '../src/domain/notifications';
 import { buildParticipantCsv, passengersByBus } from '../src/domain/participants';
@@ -24,7 +25,7 @@ const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1
   id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '', paid: false,
 });
 const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
-  users, trips, bookings, news: [], notifications: [], roster: [], settings: { ...DEFAULT_SETTINGS, ...settings },
+  users, trips, bookings, news: [], notifications: [], roster: [], audit: [], settings: { ...DEFAULT_SETTINGS, ...settings },
 });
 
 describe('phases', () => {
@@ -340,5 +341,60 @@ describe('notifications', () => {
   it('does not repeat messages when nothing changed', () => {
     const s = snap([user('a')], [trip()], [booking('a', 'confirmed')]);
     expect(deriveNotifications(s, s, T0, id)).toEqual([]);
+  });
+});
+
+describe('change log', () => {
+  let n = 0;
+  const id = () => `a${++n}`;
+  const admin = { id: 'admin', name: 'Admin' };
+  const actions = (list: { action: string }[]) => list.map((e) => e.action);
+
+  it('describes trip, news and settings changes with who did it', () => {
+    const before = snap([user('a')], [trip()], []);
+    const after = {
+      ...before,
+      trips: [trip({ seats: 5 }), trip({ id: 't2', title: 'Mainz' })],
+      news: [{ id: 'x', title: 'Neu', body: 'b', authorId: 'admin', pinned: false, createdAt: iso(T0) }],
+      settings: { ...before.settings, interestDays: 1, maxCompanions: 0, memberCode: 'Adler' },
+    };
+    const out = deriveAudit(before, after, admin, T0, id);
+    expect(actions(out)).toEqual(['trip_updated', 'trip_created', 'news_created', 'settings_changed', 'member_code_changed']);
+    expect(out[3]!.detail).toBe('Vorlauf für Mitglieder, Begleitpersonen');
+    expect(out.every((e) => e.actorName === 'Admin')).toBe(true);
+    expect(out.map((e) => e.detail).join('|')).not.toContain('Adler');
+  });
+
+  it('logs cancellations, early end of the interest phase and deletions', () => {
+    const before = snap([user('a')], [trip(), trip({ id: 't2', title: 'Weg' })], []);
+    const after = { ...before, trips: [trip({ cancelledAt: iso(T0), cancelReason: 'Schnee' })] };
+    expect(deriveAudit(before, after, admin, T0, id).map((e) => `${e.action}:${e.detail}`)).toEqual(['trip_cancelled:Augsburg: Schnee', 'trip_deleted:Weg']);
+    const ended = { ...before, trips: [trip({ interestEndsAt: iso(T0) }), before.trips[1]!] };
+    expect(actions(deriveAudit(before, ended, admin, T0, id))).toEqual(['interest_ended']);
+  });
+
+  it('logs user, payment and attendance changes, and ignores what the system does on its own', () => {
+    const before = snap([user('a', { name: 'Anna' })], [trip()], [booking('a', 'interested')]);
+    const allocated = allocateAll(before, T0 + 3 * DAY);
+    expect(deriveAudit(before, allocated, null, T0, id)).toEqual([]);
+    const after = {
+      ...allocated,
+      users: [{ ...allocated.users[0]!, isAdmin: true, baseTrips: 4 }],
+      bookings: allocated.bookings.map((b) => ({ ...b, paid: true, attended: false, bus: 2 })),
+    };
+    const out = deriveAudit(allocated, after, admin, T0, id);
+    expect(out.map((e) => e.detail)).toEqual([
+      'Anna: jetzt Admin', 'Anna: Startwert 0 → 4', 'Anna · Augsburg: bezahlt', 'Anna · Augsburg: nicht erschienen', 'Anna · Augsburg: Bus 2',
+    ]);
+    const gone = { ...after, users: [] };
+    expect(deriveAudit(after, gone, admin, T0, id).map((e) => e.action)).toContain('user_deleted');
+  });
+
+  it('logs list imports once, without a line for every new member when quiet', () => {
+    const before = snap([user('a', { isMember: false })], [], []);
+    const after = { ...before, users: [{ ...before.users[0]!, isMember: true }], roster: [{ email: 'a@x.de', name: 'A', memberNumber: '1' }] };
+    expect(deriveAudit(before, after, admin, T0, id, true).map((e) => `${e.action}:${e.detail}`)).toEqual(['roster_imported:1 neu, 0 aktualisiert, 1 zu Mitgliedern']);
+    expect(actions(deriveAudit(before, after, admin, T0, id))).toContain('member_changed');
+    expect(actions(deriveAudit(after, { ...after, roster: [] }, admin, T0, id))).toEqual(['roster_cleared']);
   });
 });

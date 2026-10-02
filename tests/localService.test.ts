@@ -65,3 +65,15 @@ describe('member code', () => {
     expect((await svc.saveSettings({ ...snap.settings, memberCode: 'abc' })).ok).toBe(false);
   });
 });
+
+describe('change log in the demo', () => {
+  it('records admin changes in the log, newest first', async () => {
+    const svc = new LocalStorageService();
+    await svc.saveNews(null, { title: 'Hallo', body: 'Welt', pinned: false }, 'admin');
+    const snap = await svc.load();
+    await svc.saveSettings({ ...snap.settings, interestDays: 1 });
+    const log = (await svc.load()).audit;
+    expect(log.map((e) => e.action)).toEqual(['settings_changed', 'news_created']);
+    expect(log[0]!.detail).toBe('Vorlauf für Mitglieder');
+  });
+});

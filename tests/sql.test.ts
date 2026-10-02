@@ -65,7 +65,7 @@ beforeAll(async () => {
 afterAll(() => db.close());
 
 beforeEach(async () => {
-  await db.exec(`delete from bookings; delete from trips; delete from news; delete from auth.users; delete from member_roster; delete from member_code_attempts;
+  await db.exec(`delete from bookings; delete from trips; delete from news; delete from auth.users; delete from member_roster; delete from member_code_attempts; delete from audit_log;
     update member_secrets set member_code = '';
     update settings set club_name = 'Fanclub', interest_days = 3, guests_may_book = true, waitlist_enabled = true`);
   await addUser('admin', { member: true, admin: true });
@@ -406,6 +406,59 @@ describe('member list and member code', () => {
     await as('admin', `select admin_clear_roster()`);
     expect(await as('admin', `select * from member_roster`)).toEqual([]);
     expect((await db.query(`select is_member from profiles where id = $1`, [ids.lukas])).rows[0]).toEqual({ is_member: true });
+  });
+});
+
+describe('change log', () => {
+  const log = () => db.query<{ action: string; detail: string; actor_name: string }>(`select action, detail, actor_name from audit_log order by id`).then((r) => r.rows);
+
+  it('logs what admins change, with their name', async () => {
+    await db.query(`delete from audit_log`);
+    const trip = await addTrip(2);
+    await as('admin', `update trips set seats = 3 where id = $1`, [trip]);
+    await as('admin', `insert into news (title, body) values ('Hallo', 'Welt')`);
+    await as('admin', `update settings set interest_days = 1, max_companions = 0`);
+    await as('admin', `update profiles set is_admin = true, base_trips = 4 where id = $1`, [ids.anna]);
+    const rows = await log();
+    // 'interest_ended' comes from the addTrip helper, which shortens the member phase after creating the trip
+    expect(rows.map((r) => r.action)).toEqual(['trip_created', 'interest_ended', 'trip_updated', 'news_created', 'settings_changed', 'admin_changed', 'points_changed']);
+    expect(rows.find((r) => r.action === 'settings_changed')!.detail).toBe('Vorlauf für Mitglieder, Begleitpersonen');
+    expect(rows.find((r) => r.action === 'points_changed')!.detail).toBe('anna: Startwert 5 → 4');
+    expect(rows.every((r) => r.actor_name === 'admin')).toBe(true);
+  });
+
+  it('logs cancellations, early ends, bookings marks and deletions, but not the allocation itself', async () => {
+    const trip = await addTrip(1);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await db.query(`delete from audit_log`);
+    await as('admin', `select admin_end_interest($1)`, [trip]);
+    const booking = (await db.query<{ id: string }>(`select id from bookings where trip_id = $1`, [trip])).rows[0]!.id;
+    await as('admin', `select admin_set_booking_paid($1, true)`, [booking]);
+    await as('admin', `select admin_set_booking_attended($1, false)`, [booking]);
+    await as('admin', `select admin_cancel_trip($1, 'Schnee')`, [trip]);
+    await as('admin', `select admin_delete_user($1)`, [ids.lukas]);
+    expect((await log()).map((r) => `${r.action}:${r.detail}`)).toEqual([
+      'interest_ended:Augsburg', 'booking_paid:anna · Augsburg: bezahlt', 'booking_attended:anna · Augsburg: nicht erschienen',
+      'trip_cancelled:Augsburg: Schnee', 'user_deleted:lukas (lukas@x.de)',
+    ]);
+  });
+
+  it('logs a list import once and keeps the member code out of the log', async () => {
+    await db.query(`delete from audit_log`);
+    await as('admin', `select admin_import_roster($1::jsonb)`, [JSON.stringify([{ email: 'lukas@x.de', name: 'L', memberNumber: '1' }])]);
+    await as('admin', `select admin_set_member_code('Adler1899')`);
+    await as('admin', `select admin_clear_roster()`);
+    const rows = await log();
+    expect(rows.map((r) => `${r.action}:${r.detail}`)).toEqual(['roster_imported:1 neu, 0 aktualisiert, 1 zu Mitgliedern', 'member_code_changed:Code geändert', 'roster_cleared:1 Einträge entfernt']);
+    expect(JSON.stringify(rows)).not.toContain('Adler1899');
+  });
+
+  it('can only be read by admins and not changed by anybody', async () => {
+    await addTrip(1);
+    expect((await as('admin', `select id from audit_log`)).length).toBeGreaterThan(0);
+    expect(await as('anna', `select id from audit_log`)).toEqual([]);
+    expect(await asErr('admin', `update audit_log set detail = 'x'`)).toMatch(/permission denied/);
+    expect(await asErr('admin', `select log_event('x', 'y')`)).toMatch(/permission denied/);
   });
 });
 

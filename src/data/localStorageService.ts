@@ -1,8 +1,10 @@
 import { DEFAULT_SETTINGS, type Snapshot, type Trip, type User } from '../domain/types';
+import { deriveAudit } from '../domain/audit';
 import { deriveNotifications } from '../domain/notifications';
 import { allocateAll, allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
+import { sessionUserId } from './session';
 
 const KEY = 'fanclub.data.v1';
 const ok: Result = { ok: true };
@@ -18,6 +20,7 @@ function migrate(raw: Partial<Snapshot>): Snapshot {
     news: raw.news ?? [],
     notifications: raw.notifications ?? [],
     roster: raw.roster ?? [],
+    audit: raw.audit ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
   };
 }
@@ -48,13 +51,23 @@ export class LocalStorageService implements DataService {
   }
 
   /** Reads, applies a change, hands out due seats and stores the result. */
-  private async mutate(fn: (s: Snapshot, now: number) => Snapshot | string): Promise<Result> {
+  private async mutate(fn: (s: Snapshot, now: number) => Snapshot | string, quiet = false): Promise<Result> {
     const now = Date.now();
     const start = await this.read();
     const out = fn(allocateAll(start, now), now);
     if (typeof out === 'string') return fail(out);
-    this.write(this.withNotifications(start, allocateAll(out, now), now));
+    const end = allocateAll(out, now);
+    this.write(this.withAudit(start, this.withNotifications(start, end, now), now, quiet));
     return ok;
+  }
+
+  /** Adds change log entries for what the logged-in person changed. */
+  private withAudit(before: Snapshot, after: Snapshot, now: number, quiet: boolean): Snapshot {
+    const id = sessionUserId();
+    const person = [...before.users, ...after.users].find((u) => u.id === id);
+    const actor = person ? { id: person.id, name: person.name } : null;
+    const fresh = deriveAudit(before, after, actor, now, uid, quiet);
+    return fresh.length === 0 ? after : { ...after, audit: [...fresh, ...after.audit].slice(0, 500) };
   }
 
   /** Adds the messages that follow from the difference between two states. */
@@ -93,7 +106,7 @@ export class LocalStorageService implements DataService {
         return { ...u, isMember: true, memberRequested: false };
       });
       return { ...s, roster: [...roster.values()], users };
-    });
+    }, true);
     return res.ok ? { ok: true, added, updated, promoted } : res;
   };
 

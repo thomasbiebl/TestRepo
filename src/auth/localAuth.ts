@@ -1,10 +1,10 @@
 import type { Result } from '../data/DataService';
 import { hashPassword } from '../data/seed';
+import { SESSION_KEY } from '../data/session';
 import type { LocalStorageService } from '../data/localStorageService';
 import type { User } from '../domain/types';
 import type { AuthService } from './AuthService';
 
-const SESSION_KEY = 'fanclub.session.v1';
 
 /**
  * Demo login: users and password hashes live in the browser. This is NOT secure and only

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Notification, type RosterEntry, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
+import { DEFAULT_SETTINGS, type AuditEntry, type Booking, type NewsPost, type Notification, type RosterEntry, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
 import { validateSettings } from '../domain/rules';
 import type { DataService, Result } from './DataService';
 
@@ -9,6 +9,7 @@ interface TripRow { id: string; title: string; departure: string; meeting_point:
 interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null; companions: number; companion_names: string; stop: string | null; bus: number | null; paid: boolean; attended: boolean | null }
 interface NewsRow { id: string; title: string; body: string; author_id: string | null; pinned: boolean; created_at: string; updated_at: string | null }
 interface NotificationRow { id: string; user_id: string; type: Notification['type']; title: string; body: string; trip_id: string | null; created_at: string; read_at: string | null }
+interface AuditRow { id: number | string; at: string; actor_id: string | null; actor_name: string; action: AuditEntry['action']; detail: string }
 interface RosterRow { email: string; name: string; member_number: string }
 interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number; max_companions: number; no_show_penalty: number }
 
@@ -56,12 +57,12 @@ export class SupabaseService implements DataService {
     const settingsRes = await this.sb.from('settings').select('*').eq('id', 1).maybeSingle();
     if (settingsRes.error) throw settingsRes.error;
     const settings = toSettings(settingsRes.data as SettingsRow | null);
-    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings, notifications: [], roster: [] };
+    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings, notifications: [], roster: [], audit: [] };
 
     // Hands out seats for trips whose member phase is over. Safe to call any time.
     await this.sb.rpc('allocate_due_trips');
 
-    const [names, profiles, trips, bookings, news, notifications, roster, secrets] = await Promise.all([
+    const [names, profiles, trips, bookings, news, notifications, roster, secrets, audit] = await Promise.all([
       this.sb.from('public_profiles').select('id, name, base_trips, is_member'),
       this.sb.from('profiles').select('*'),
       this.sb.from('trips').select('*'),
@@ -70,8 +71,9 @@ export class SupabaseService implements DataService {
       this.sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
       this.sb.from('member_roster').select('*').order('email'),
       this.sb.from('member_secrets').select('member_code').eq('id', 1).maybeSingle(),
+      this.sb.from('audit_log').select('*').order('at', { ascending: false }).limit(200),
     ]);
-    for (const res of [names, profiles, trips, bookings, news, notifications, roster, secrets]) if (res.error) throw res.error;
+    for (const res of [names, profiles, trips, bookings, news, notifications, roster, secrets, audit]) if (res.error) throw res.error;
 
     // Everyone sees names; admins see full profiles, others only their own.
     const users = new Map((names.data as ProfileRow[]).map((r) => [r.id, toUser(r)]));
@@ -85,6 +87,7 @@ export class SupabaseService implements DataService {
       // The member code is only returned to admins; everybody else gets an empty one.
       settings: { ...settings, memberCode: (secrets.data as { member_code: string } | null)?.member_code ?? '' },
       notifications: (notifications.data as NotificationRow[]).map(toNotification),
+      audit: (audit.data as AuditRow[]).map((r): AuditEntry => ({ id: String(r.id), at: r.at, actorId: r.actor_id ?? '', actorName: r.actor_name, action: r.action, detail: r.detail })),
       roster: (roster.data as RosterRow[]).map((r): RosterEntry => ({ email: r.email, name: r.name, memberNumber: r.member_number })),
     };
   }

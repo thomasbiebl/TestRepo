@@ -83,5 +83,5 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
       body: 'Die Fahrt nach Augsburg ist online. Mitglieder können jetzt Interesse bekunden.\nAbfahrt am Parkplatz Stadion.',
     },
   ];
-  return { users, trips, bookings, news, settings: { ...DEFAULT_SETTINGS }, notifications: [], roster: [] };
+  return { users, trips, bookings, news, settings: { ...DEFAULT_SETTINGS }, notifications: [], roster: [], audit: [] };
 }

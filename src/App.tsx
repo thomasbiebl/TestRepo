@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminHome } from './pages/AdminHome';
+import { AdminLog } from './pages/AdminLog';
 import { AdminNews } from './pages/AdminNews';
 import { AdminSettings } from './pages/AdminSettings';
 import { AdminRoster } from './pages/AdminRoster';
@@ -58,6 +59,7 @@ export function App() {
             <Route path="admin/users" element={<AdminUsers />} />
             <Route path="admin/roster" element={<AdminRoster />} />
             <Route path="admin/news" element={<AdminNews />} />
+            <Route path="admin/log" element={<AdminLog />} />
             <Route path="admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>

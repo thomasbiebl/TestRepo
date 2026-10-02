@@ -26,6 +26,7 @@ export function AdminHome() {
         <Link className="btn ghost" to="/admin/roster">Mitgliederliste importieren</Link>
         <Link className="btn ghost" to="/admin/news">News verwalten</Link>
         <Link className="btn ghost" to="/admin/settings">Einstellungen</Link>
+        <Link className="btn ghost" to="/admin/log">Änderungsprotokoll</Link>
       </div>
       {data.resetDemo && (
         <>

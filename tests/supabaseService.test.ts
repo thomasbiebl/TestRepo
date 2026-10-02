@@ -37,6 +37,7 @@ describe('SupabaseService', () => {
       trips: [{ id: 't1', title: 'A', departure: '2026-12-01T08:00:00Z', meeting_point: 'P', price: '28.00', seats: 50, created_at: '2026-11-01T00:00:00Z', interest_ends_at: '2026-11-04T00:00:00Z', allocated_at: null, kickoff: null, return_time: null, notes: '', cancelled_at: null, cancel_reason: null, stops: null, buses: 1, points: 2 }],
       bookings: [{ id: 'b1', trip_id: 't1', user_id: 'u1', status: 'interested', created_at: '2026-11-02T00:00:00Z', queued_at: null, companions: 1, companion_names: 'Petra', stop: null, bus: null, paid: true, attended: false }],
       notifications: [{ id: 'x1', user_id: 'u1', type: 'allocated', title: 'Platz bestätigt', body: 'b', trip_id: 't1', created_at: '2026-11-05T00:00:00Z', read_at: null }],
+      audit_log: [{ id: 7, at: '2026-11-06T00:00:00Z', actor_id: null, actor_name: 'System', action: 'trip_created', detail: 'Augsburg' }],
       member_roster: [{ email: 'max@x.de', name: 'Max', member_number: '7' }],
       member_secrets: [{ member_code: 'geheim' }],
       news: [{ id: 'n1', title: 'Hi', body: 'Text', author_id: null, pinned: true, created_at: '2026-11-01T00:00:00Z', updated_at: null }],
@@ -47,6 +48,7 @@ describe('SupabaseService', () => {
     expect(snap.trips[0]).toMatchObject({ meetingPoint: 'P', price: 28, allocatedAt: undefined });
     expect(snap.bookings[0]).toMatchObject({ tripId: 't1', userId: 'u1', status: 'interested', companions: 1, companionNames: 'Petra', paid: true, attended: false });
     expect(snap.trips[0]).toMatchObject({ points: 2 });
+    expect(snap.audit).toEqual([{ id: '7', at: '2026-11-06T00:00:00Z', actorId: '', actorName: 'System', action: 'trip_created', detail: 'Augsburg' }]);
     expect(snap.roster).toEqual([{ email: 'max@x.de', name: 'Max', memberNumber: '7' }]);
     expect(snap.settings.memberCode).toBe('geheim');
     expect(snap.notifications[0]).toMatchObject({ userId: 'u1', type: 'allocated', tripId: 't1', readAt: undefined });
