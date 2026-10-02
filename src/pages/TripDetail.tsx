@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Badge, Countdown, PhaseBadge, SeatBar, StatusBadge, fmtDate, fmtPrice, shortName } from '../components/ui';
 import { buildIcs } from '../domain/ics';
-import { byTrip, cancelBlockedReason, confirmedCount, freeSeats, getTripPhase, pastTripCount, rankInterested, waitlistOf } from '../domain/rules';
+import { byTrip, cancelBlockedReason, confirmedCount, fitsInOrder, freeSeats, getTripPhase, pastTripCount, rankInterested, waitlistOf } from '../domain/rules';
 import { downloadFile } from '../lib/download';
 import { useApp } from '../state/AppContext';
 
@@ -9,6 +10,9 @@ export function TripDetail() {
   const { id } = useParams();
   const { snap, user, now, act, data } = useApp();
   const trip = snap?.trips.find((t) => t.id === id);
+  const [companions, setCompanions] = useState(0);
+  const [names, setNames] = useState('');
+  const [stop, setStop] = useState('');
   if (!snap || !user) return null;
   if (!trip) return <Navigate to="/" replace />;
 
@@ -19,6 +23,9 @@ export function TripDetail() {
   const waitlist = waitlistOf(snap.bookings, trip.id);
   const ranked = rankInterested(trip, snap, now);
   const myRank = ranked.findIndex((r) => r.booking.userId === user.id) + 1;
+  const fits = fitsInOrder(ranked.map((r) => r.booking), trip.seats);
+  const need = 1 + companions;
+  const chosenStop = trip.stops.length ? stop || trip.stops[0] : undefined;
   const myTrips = pastTripCount(user, snap.trips, snap.bookings, now);
   const { guestsMayBook, waitlistEnabled } = snap.settings;
   const mayTry = phase === 'open' ? user.isMember || guestsMayBook : user.isMember;
@@ -26,10 +33,12 @@ export function TripDetail() {
   const cancelBlock = mine ? cancelBlockedReason(mine, trip, snap.settings, now) : null;
   const waitPos = mine?.status === 'waitlist' ? waitlist.findIndex((b) => b.id === mine.id) + 1 : 0;
 
-  const book = () => act(() => data.book(trip.id, user.id), phase === 'interest' ? 'Interesse bekundet.' : undefined);
+  const book = () =>
+    act(() => data.book(trip.id, user.id, { companions, companionNames: names, stop: chosenStop }), phase === 'interest' ? 'Interesse bekundet.' : undefined);
   const cancel = () => act(() => data.cancel(trip.id, user.id), mine?.status === 'interested' ? 'Interesse zurückgezogen.' : 'Buchung storniert.');
 
-  const mainLabel = phase === 'interest' ? 'Interesse bekunden' : free > 0 ? 'Platz buchen' : 'Auf die Warteliste';
+  const seatsText = need > 1 ? ` (${need} Plätze)` : '';
+  const mainLabel = (phase === 'interest' ? 'Interesse bekunden' : free >= need ? 'Platz buchen' : 'Auf die Warteliste') + seatsText;
   const cancelLabel = mine?.status === 'interested' ? 'Interesse zurückziehen' : mine?.status === 'waitlist' ? 'Von der Warteliste streichen' : 'Buchung stornieren';
 
   return (
@@ -63,12 +72,21 @@ export function TripDetail() {
               <StatusBadge status={mine.status} />
             </div>
             <p className="muted">
-              {mine.status === 'interested' && (myRank <= trip.seats
+              {mine.status === 'interested' && (fits[myRank - 1]
                 ? `Du hast ${myTrips} bisherige Fahrten und liegst auf Rang ${myRank} von ${ranked.length}. Bei ${trip.seats} Plätzen bist du aktuell dabei.`
                 : `Du hast ${myTrips} bisherige Fahrten und liegst auf Rang ${myRank} von ${ranked.length}. Aktuell reichen die Plätze (${trip.seats}) nicht bis zu dir.`)}
               {mine.status === 'confirmed' && 'Dein Platz ist sicher. Wir freuen uns auf dich.'}
               {mine.status === 'waitlist' && `Du bist auf Platz ${waitPos} der Warteliste und rückst automatisch nach, sobald ein Platz frei wird.`}
             </p>
+            {(mine.companions > 0 || mine.stop || mine.bus) && (
+              <p className="muted">
+                {[
+                  mine.companions > 0 ? `Du + ${mine.companions} Begleitperson${mine.companions > 1 ? 'en' : ''}${mine.companionNames ? ` (${mine.companionNames})` : ''}` : '',
+                  mine.stop ? `Zustieg: ${mine.stop}` : '',
+                  mine.bus ? `Bus ${mine.bus}` : '',
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </section>
         )}
 
@@ -77,8 +95,8 @@ export function TripDetail() {
             <h3>Rangliste (bisherige Fahrten)</h3>
             <ol className="rank">
               {ranked.map((r, i) => (
-                <li key={r.booking.id} className={r.booking.userId === user.id ? 'me' : ''} data-in={i < trip.seats ? 'true' : 'false'}>
-                  <span>{i + 1} · {r.booking.userId === user.id ? 'Du' : shortName(r.user.name)}</span>
+                <li key={r.booking.id} className={r.booking.userId === user.id ? 'me' : ''} data-in={fits[i] ? 'true' : 'false'}>
+                  <span>{i + 1} · {r.booking.userId === user.id ? 'Du' : shortName(r.user.name)}{r.booking.companions > 0 ? ` +${r.booking.companions}` : ''}</span>
                   <b>{r.trips}</b>
                 </li>
               ))}
@@ -118,7 +136,39 @@ export function TripDetail() {
         {soldOut && !mine && <p className="notice">Diese Fahrt ist ausgebucht.</p>}
 
         {phase !== 'closed' && phase !== 'cancelled' && !mine && mayTry && !soldOut && (
-          <button className="btn" onClick={book}>{mainLabel}</button>
+          <>
+            {(snap.settings.maxCompanions > 0 || trip.stops.length > 0) && (
+              <section className="card form">
+                <h3>Deine Buchung</h3>
+                {trip.stops.length > 0 && (
+                  <>
+                    <label htmlFor="b-stop">Zustiegsstelle</label>
+                    <select id="b-stop" value={chosenStop} onChange={(e) => setStop(e.target.value)}>
+                      {trip.stops.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </>
+                )}
+                {snap.settings.maxCompanions > 0 && (
+                  <>
+                    <label htmlFor="b-comp">Begleitpersonen</label>
+                    <select id="b-comp" value={companions} onChange={(e) => setCompanions(Number(e.target.value))}>
+                      {Array.from({ length: snap.settings.maxCompanions + 1 }, (_, i) => (
+                        <option key={i} value={i}>{i === 0 ? 'Keine, nur ich' : `${i} Begleitperson${i > 1 ? 'en' : ''}`}</option>
+                      ))}
+                    </select>
+                    {companions > 0 && (
+                      <>
+                        <label htmlFor="b-names">Namen der Begleitpersonen (optional)</label>
+                        <input id="b-names" value={names} onChange={(e) => setNames(e.target.value)} />
+                        <p className="muted">Jede Begleitperson belegt einen Platz und bezahlt den Fahrpreis.</p>
+                      </>
+                    )}
+                  </>
+                )}
+              </section>
+            )}
+            <button className="btn" onClick={book}>{mainLabel}</button>
+          </>
         )}
         {phase !== 'closed' && phase !== 'cancelled' && mine && (
           cancelBlock ? <p className="notice">{cancelBlock}</p> : <button className="btn ghost" onClick={cancel}>{cancelLabel}</button>

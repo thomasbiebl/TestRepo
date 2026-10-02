@@ -12,8 +12,8 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 function migrate(raw: Partial<Snapshot>): Snapshot {
   return {
     users: raw.users ?? [],
-    trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '' })),
-    bookings: raw.bookings ?? [],
+    trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '', stops: t.stops ?? [], buses: t.buses ?? 1 })),
+    bookings: (raw.bookings ?? []).map((b) => ({ ...b, companions: b.companions ?? 0, companionNames: b.companionNames ?? '' })),
     news: raw.news ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
   };
@@ -103,6 +103,7 @@ export class LocalStorageService implements DataService {
   saveTrip: DataService['saveTrip'] = (id, input: TripInput) =>
     this.mutate((s, now) => {
       if (input.seats < 1) return 'Mindestens ein Platz.';
+      if (!Number.isInteger(input.buses) || input.buses < 1 || input.buses > 10) return 'Die Zahl der Busse muss zwischen 1 und 10 liegen.';
       if (Number.isNaN(Date.parse(input.departure))) return 'Bitte eine gültige Abfahrtszeit angeben.';
       if (id === null) {
         const createdAt = new Date(now).toISOString();
@@ -137,13 +138,22 @@ export class LocalStorageService implements DataService {
       return allocateTrip({ ...s, trips }, tripId, now);
     });
 
-  book: DataService['book'] = (tripId, userId) =>
+  book: DataService['book'] = (tripId, userId, options) =>
     this.mutate((s, now) => {
       const trip = s.trips.find((t) => t.id === tripId);
       const user = s.users.find((u) => u.id === userId);
       if (!trip || !user) return 'Fahrt oder Benutzer nicht gefunden.';
-      const res = createBooking(s, trip, user, now, uid());
+      const res = createBooking(s, trip, user, now, uid(), options);
       return res.ok ? { ...s, bookings: [...s.bookings, res.booking] } : res.error;
+    });
+
+  setBookingBus: DataService['setBookingBus'] = (bookingId, bus) =>
+    this.mutate((s) => {
+      const booking = s.bookings.find((b) => b.id === bookingId);
+      const trip = s.trips.find((t) => t.id === booking?.tripId);
+      if (!booking || !trip) return 'Buchung nicht gefunden.';
+      if (bus !== null && (bus < 1 || bus > trip.buses)) return 'Diesen Bus gibt es bei der Fahrt nicht.';
+      return { ...s, bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, bus: bus ?? undefined } : b)) };
     });
 
   cancel: DataService['cancel'] = (tripId, userId) =>

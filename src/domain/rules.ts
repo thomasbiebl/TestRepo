@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type TripPhase, type User } from './types';
+import { DEFAULT_SETTINGS, type BookOptions, type Booking, type Settings, type Snapshot, type Trip, type TripPhase, type User } from './types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,8 +23,12 @@ export function pastTripCount(user: User, trips: Trip[], bookings: Booking[], no
 
 export const byTrip = (bookings: Booking[], tripId: string) => bookings.filter((b) => b.tripId === tripId);
 
+/** Seats a booking takes: the person plus companions. */
+export const seatsOf = (b: Booking) => 1 + b.companions;
+
+/** Confirmed seats of a trip (people, not bookings). */
 export const confirmedCount = (bookings: Booking[], tripId: string) =>
-  byTrip(bookings, tripId).filter((b) => b.status === 'confirmed').length;
+  byTrip(bookings, tripId).filter((b) => b.status === 'confirmed').reduce((sum, b) => sum + seatsOf(b), 0);
 
 export const freeSeats = (trip: Trip, bookings: Booking[]) => Math.max(0, trip.seats - confirmedCount(bookings, trip.id));
 
@@ -38,6 +42,16 @@ export function rankInterested(trip: Trip, snap: Snapshot, now: number): { booki
       return user ? [{ booking, user, trips: pastTripCount(user, snap.trips, snap.bookings, now) }] : [];
     })
     .sort((a, b) => b.trips - a.trips || a.booking.createdAt.localeCompare(b.booking.createdAt));
+}
+
+/** Which of the ranked bookings get a seat: groups that no longer fit are skipped, later ones may still fit. */
+export function fitsInOrder(bookings: Booking[], seats: number): boolean[] {
+  let used = 0;
+  return bookings.map((b) => {
+    if (used + seatsOf(b) > seats) return false;
+    used += seatsOf(b);
+    return true;
+  });
 }
 
 /** Waiting list of a trip in queue order. */
@@ -57,13 +71,14 @@ export function allocateTrip(snap: Snapshot, tripId: string, now: number): Snaps
   const ranked = rankInterested(trip, snap, now);
   const stamp = new Date(now).getTime();
   const changed = new Map<string, Booking>();
+  // A group that no longer fits goes to the waiting list; smaller groups after it may still fit.
+  const fits = fitsInOrder(ranked.map((r) => r.booking), trip.seats);
   ranked.forEach(({ booking }, i) => {
-    changed.set(
-      booking.id,
-      i < trip.seats
-        ? { ...booking, status: 'confirmed' }
-        : { ...booking, status: 'waitlist', queuedAt: new Date(stamp + i).toISOString() },
-    );
+    if (fits[i]) {
+      changed.set(booking.id, { ...booking, status: 'confirmed' });
+    } else {
+      changed.set(booking.id, { ...booking, status: 'waitlist', queuedAt: new Date(stamp + i).toISOString() });
+    }
   });
   return {
     ...snap,
@@ -79,7 +94,13 @@ export const allocateAll = (snap: Snapshot, now: number): Snapshot =>
 export function promoteWaitlist(bookings: Booking[], trip: Trip): Booking[] {
   let free = freeSeats(trip, bookings);
   if (free <= 0) return bookings;
-  const promote = new Set(waitlistOf(bookings, trip.id).slice(0, free).map((b) => b.id));
+  const promote = new Set<string>();
+  for (const b of waitlistOf(bookings, trip.id)) {
+    if (seatsOf(b) <= free) {
+      promote.add(b.id);
+      free -= seatsOf(b);
+    }
+  }
   return bookings.map((b) => (promote.has(b.id) ? { ...b, status: 'confirmed', queuedAt: undefined } : b));
 }
 
@@ -92,10 +113,22 @@ export function createBooking(
   user: User,
   now: number,
   id: string,
+  options: BookOptions = { companions: 0, companionNames: '' },
 ): BookResult {
   if (byTrip(snap.bookings, trip.id).some((b) => b.userId === user.id)) {
     return { ok: false, error: 'Du hast diese Fahrt schon gebucht.' };
   }
+  const { maxCompanions } = snap.settings;
+  if (!Number.isInteger(options.companions) || options.companions < 0 || options.companions > maxCompanions) {
+    return { ok: false, error: `Du kannst höchstens ${maxCompanions} Begleitpersonen mitbringen.` };
+  }
+  let stop: string | undefined;
+  if (trip.stops.length > 0) {
+    if (!options.stop || !trip.stops.includes(options.stop)) return { ok: false, error: 'Bitte wähle eine Zustiegsstelle.' };
+    stop = options.stop;
+  }
+  const need = 1 + options.companions;
+  const extra = { companions: options.companions, companionNames: options.companionNames.trim(), stop };
   const nowIso = new Date(now).toISOString();
   switch (getTripPhase(trip, now)) {
     case 'cancelled':
@@ -104,12 +137,12 @@ export function createBooking(
       return { ok: false, error: 'Die Fahrt ist bereits abgefahren.' };
     case 'interest':
       if (!user.isMember) return { ok: false, error: 'Nur Mitglieder können jetzt Interesse bekunden.' };
-      return { ok: true, booking: { id, tripId: trip.id, userId: user.id, status: 'interested', createdAt: nowIso } };
+      return { ok: true, booking: { id, tripId: trip.id, userId: user.id, status: 'interested', createdAt: nowIso, ...extra } };
     case 'open': {
       if (!user.isMember && !snap.settings.guestsMayBook) {
         return { ok: false, error: 'Die Buchung ist zurzeit nur für Mitglieder möglich.' };
       }
-      const full = freeSeats(trip, snap.bookings) === 0;
+      const full = freeSeats(trip, snap.bookings) < need;
       if (full && !snap.settings.waitlistEnabled) return { ok: false, error: 'Die Fahrt ist leider ausgebucht.' };
       return {
         ok: true,
@@ -120,6 +153,7 @@ export function createBooking(
           status: full ? 'waitlist' : 'confirmed',
           createdAt: nowIso,
           queuedAt: full ? nowIso : undefined,
+          ...extra,
         },
       };
     }
@@ -138,6 +172,9 @@ export function validateSettings(s: Settings): string | null {
     return 'Der Vorlauf für Mitglieder muss zwischen 0 und 30 Tagen liegen.';
   }
   if (!Number.isInteger(s.defaultSeats) || s.defaultSeats < 1) return 'Mindestens ein Platz als Standard.';
+  if (!Number.isInteger(s.maxCompanions) || s.maxCompanions < 0 || s.maxCompanions > 10) {
+    return 'Begleitpersonen: zwischen 0 und 10 pro Buchung.';
+  }
   if (!Number.isInteger(s.cancelDeadlineHours) || s.cancelDeadlineHours < 0 || s.cancelDeadlineHours > 720) {
     return 'Die Stornofrist muss zwischen 0 und 720 Stunden liegen.';
   }

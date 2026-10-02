@@ -3,13 +3,14 @@ import { validateSettings } from '../domain/rules';
 import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
-type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours', string> &
+type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions', string> &
   Pick<Settings, 'guestsMayBook' | 'waitlistEnabled'>;
 
 const toDraft = (s: Settings): Draft => ({
   clubName: s.clubName,
   interestDays: String(s.interestDays),
   cancelDeadlineHours: String(s.cancelDeadlineHours),
+  maxCompanions: String(s.maxCompanions),
   defaultSeats: String(s.defaultSeats),
   defaultPrice: String(s.defaultPrice),
   defaultMeetingPoint: s.defaultMeetingPoint,
@@ -21,6 +22,7 @@ const fromDraft = (d: Draft): Settings => ({
   clubName: d.clubName,
   interestDays: Number(d.interestDays),
   cancelDeadlineHours: Number(d.cancelDeadlineHours),
+  maxCompanions: Number(d.maxCompanions),
   defaultSeats: Number(d.defaultSeats),
   defaultPrice: Number(d.defaultPrice),
   defaultMeetingPoint: d.defaultMeetingPoint,
@@ -67,6 +69,9 @@ export function AdminSettings() {
           <label htmlFor="s-cancel">Stornofrist für bestätigte Plätze (Stunden vor Abfahrt)</label>
           <input id="s-cancel" type="number" inputMode="numeric" min={0} max={720} step={1} required value={d.cancelDeadlineHours} onChange={set('cancelDeadlineHours')} />
           <p className="muted">0 heißt: stornieren ist bis zur Abfahrt möglich. Interesse und Wartelistenplätze lassen sich immer zurückziehen.</p>
+          <label htmlFor="s-comp">Begleitpersonen pro Buchung (höchstens)</label>
+          <input id="s-comp" type="number" inputMode="numeric" min={0} max={10} step={1} required value={d.maxCompanions} onChange={set('maxCompanions')} />
+          <p className="muted">0 schaltet Begleitpersonen aus. Jede Begleitperson belegt einen Platz, die Rangfolge richtet sich nach der buchenden Person.</p>
           <label className="check" htmlFor="s-wait">
             <input id="s-wait" type="checkbox" checked={d.waitlistEnabled} onChange={(e) => setDraft({ ...d, waitlistEnabled: e.target.checked })} />
             Warteliste bei ausgebuchten Fahrten

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildMyExport } from '../src/domain/exports';
 import { buildIcs } from '../src/domain/ics';
 import {
-  allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
+  allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
 } from '../src/domain/rules';
 import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
@@ -15,11 +15,11 @@ const user = (id: string, o: Partial<User> = {}): User => ({
   memberRequested: false, baseTrips: 0, createdAt: iso(T0), ...o,
 });
 const trip = (o: Partial<Trip> = {}): Trip => ({
-  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '',
+  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '', stops: [], buses: 1,
   createdAt: iso(T0), interestEndsAt: interestEndFor(iso(T0)), ...o,
 });
 const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1'): Booking => ({
-  id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at),
+  id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '',
 });
 const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
   users, trips, bookings, news: [], settings: { ...DEFAULT_SETTINGS, ...settings },
@@ -185,5 +185,54 @@ describe('calendar export', () => {
     expect(ics.replace(/\r\n /g, '')).toContain('Treffpunkt\\; pünktlich\\nGetränke mit');
     expect(ics.split('\r\n').every((l) => l.length <= 75)).toBe(true);
     expect(ics.trimEnd().endsWith('END:VCALENDAR')).toBe(true);
+  });
+});
+
+describe('companions and boarding points', () => {
+  const group = (userId: string, companions: number, status: Booking['status'], at = 0): Booking => ({ ...booking(userId, status, at), companions });
+
+  it('counts people, not bookings, against the seats', () => {
+    const s = snap([user('a'), user('b'), user('c')], [trip({ seats: 4 })], [group('a', 2, 'confirmed')]);
+    expect(freeSeats(s.trips[0]!, s.bookings)).toBe(1);
+    const open = T0 + 4 * DAY;
+    const two = createBooking(s, s.trips[0]!, user('b'), open, 'x', { companions: 1, companionNames: '' });
+    expect(two.ok && two.booking.status).toBe('waitlist');
+    const one = createBooking(s, s.trips[0]!, user('c'), open, 'y', { companions: 0, companionNames: '' });
+    expect(one.ok && one.booking.status).toBe('confirmed');
+  });
+
+  it('limits companions to the setting and can switch them off', () => {
+    const m = user('m');
+    const s = snap([m], [trip()], [], { maxCompanions: 1 });
+    const tooMany = createBooking(s, s.trips[0]!, m, T0 + DAY, 'x', { companions: 2, companionNames: '' });
+    expect(tooMany.ok).toBe(false);
+    const off = snap([m], [trip()], [], { maxCompanions: 0 });
+    expect(createBooking(off, off.trips[0]!, m, T0 + DAY, 'x', { companions: 1, companionNames: '' }).ok).toBe(false);
+  });
+
+  it('skips a group that does not fit, lets smaller later claims in, and promotes whoever fits', () => {
+    const users = [user('a', { baseTrips: 9 }), user('b', { baseTrips: 8 }), user('c', { baseTrips: 7 })];
+    const t = trip({ seats: 4 });
+    const s = snap(users, [t], [group('a', 2, 'interested', 1), group('b', 2, 'interested', 2), group('c', 0, 'interested', 3)]);
+    const out = allocateTrip(s, 't1', T0 + 3 * DAY);
+    const status = Object.fromEntries(out.bookings.map((b) => [b.userId, b.status]));
+    expect(status).toEqual({ a: 'confirmed', b: 'waitlist', c: 'confirmed' });
+    // a cancels: the group of three (b) needs 3 seats but only 3 are free -> promoted
+    const rest = out.bookings.filter((b) => b.userId !== 'a');
+    const promoted = promoteWaitlist(rest, out.trips[0]!);
+    expect(promoted.find((b) => b.userId === 'b')?.status).toBe('confirmed');
+  });
+
+  it('requires a valid boarding point when the trip has stops', () => {
+    const m = user('m');
+    const t = trip({ stops: ['Stadion', 'Bahnhof'] });
+    const s = snap([m], [t], []);
+    expect(createBooking(s, t, m, T0 + DAY, 'x').ok).toBe(false);
+    expect(createBooking(s, t, m, T0 + DAY, 'x', { companions: 0, companionNames: '', stop: 'Flughafen' }).ok).toBe(false);
+    const ok = createBooking(s, t, m, T0 + DAY, 'x', { companions: 0, companionNames: '', stop: 'Bahnhof' });
+    expect(ok.ok && ok.booking.stop).toBe('Bahnhof');
+    const plain = trip();
+    const noStop = createBooking(snap([m], [plain], []), plain, m, T0 + DAY, 'x', { companions: 0, companionNames: '', stop: 'Egal' });
+    expect(noStop.ok && noStop.booking.stop).toBeUndefined();
   });
 });

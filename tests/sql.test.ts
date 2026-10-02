@@ -208,6 +208,57 @@ describe('trip info, cancellation and deadline', () => {
   });
 });
 
+describe('companions, stops and buses', () => {
+  const nBooked = async (trip: string) =>
+    (await db.query<{ n: number }>(`select coalesce(sum(1 + companions), 0)::int as n from bookings where trip_id = $1 and status = 'confirmed'`, [trip])).rows[0]!.n;
+
+  it('counts companions as seats and uses the waiting list for groups that do not fit', async () => {
+    const trip = await addTrip(4, 0);
+    await endInterest(trip);
+    await as('anna', `select book_trip($1, 2)`, [trip]);
+    expect(await nBooked(trip)).toBe(3);
+    const st = await as<{ book_trip: string }>('max', `select book_trip($1, 1)`, [trip]);
+    expect(st[0]!.book_trip).toBe('waitlist');
+    const st2 = await as<{ book_trip: string }>('karl', `select book_trip($1)`, [trip]);
+    expect(st2[0]!.book_trip).toBe('confirmed');
+    expect(await asErr('lukas', `select book_trip($1, 9)`, [trip])).toMatch(/höchstens 3/);
+  });
+
+  it('allocates groups greedily by rank and promotes whoever fits after a cancellation', async () => {
+    const trip = await addTrip(4);
+    await as('max', `select book_trip($1, 2)`, [trip]);   // 9 trips, needs 3
+    await as('karl', `select book_trip($1, 2)`, [trip]);  // 9 trips, needs 3 -> does not fit
+    await as('anna', `select book_trip($1, 0)`, [trip]);  // 5 trips, needs 1 -> fits
+    await endInterest(trip);
+    await as('anna', `select allocate_due_trips()`);
+    expect(await statuses(trip)).toEqual({ max: 'confirmed', karl: 'waitlist', anna: 'confirmed' });
+    await as('max', `select cancel_booking($1)`, [trip]);
+    expect(await statuses(trip)).toEqual({ karl: 'confirmed', anna: 'confirmed' });
+  });
+
+  it('requires a boarding point from the list when the trip has stops', async () => {
+    const res = await as<{ id: string }>('admin', `insert into trips (title, departure, meeting_point, price, seats, stops, buses) values ('S', now() + interval '9 days', 'P', 1, 9, array['Stadion', 'Bahnhof'], 2) returning id`);
+    const trip = res[0]!.id;
+    await db.query(`update trips set interest_ends_at = now() - interval '1 minute' where id = $1`, [trip]);
+    expect(await asErr('anna', `select book_trip($1)`, [trip])).toMatch(/Zustiegsstelle/);
+    expect(await asErr('anna', `select book_trip($1, 0, '', 'Flughafen')`, [trip])).toMatch(/Zustiegsstelle/);
+    await as('anna', `select book_trip($1, 0, '', 'Bahnhof')`, [trip]);
+    expect((await db.query(`select stop from bookings where trip_id = $1`, [trip])).rows[0]).toEqual({ stop: 'Bahnhof' });
+  });
+
+  it('lets only admins assign a booking to an existing bus', async () => {
+    const res = await as<{ id: string }>('admin', `insert into trips (title, departure, meeting_point, price, seats, buses) values ('B', now() + interval '9 days', 'P', 1, 9, 2) returning id`);
+    const trip = res[0]!.id;
+    await db.query(`update trips set interest_ends_at = now() - interval '1 minute' where id = $1`, [trip]);
+    await as('anna', `select book_trip($1)`, [trip]);
+    const booking = (await db.query<{ id: string }>(`select id from bookings where trip_id = $1`, [trip])).rows[0]!.id;
+    expect(await asErr('anna', `select admin_set_booking_bus($1, 1)`, [booking])).toMatch(/Admins/);
+    expect(await asErr('admin', `select admin_set_booking_bus($1, 3)`, [booking])).toMatch(/Bus gibt es/);
+    await as('admin', `select admin_set_booking_bus($1, 2)`, [booking]);
+    expect((await db.query(`select bus from bookings where id = $1`, [booking])).rows[0]).toEqual({ bus: 2 });
+  });
+});
+
 describe('own profile', () => {
   it('lets users change their own name, and nothing else', async () => {
     await as('anna', `select update_my_name('Anna Neu')`);

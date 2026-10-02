@@ -1,10 +1,10 @@
-import type { NewsPost, Settings, Snapshot, Trip, User } from '../domain/types';
+import type { BookOptions, NewsPost, Settings, Snapshot, Trip, User } from '../domain/types';
 
 export type Result = { ok: true } | { ok: false; error: string };
 
 export type NewsInput = Pick<NewsPost, 'title' | 'body' | 'pinned'>;
 
-export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats' | 'notes' | 'kickoff' | 'returnTime'>;
+export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats' | 'notes' | 'kickoff' | 'returnTime' | 'stops' | 'buses'>;
 
 /**
  * Everything the UI needs from storage. The local implementation keeps data in the browser;
@@ -29,8 +29,10 @@ export interface DataService {
   endInterestNow(tripId: string): Promise<Result>;
 
   /** Interest (members, phase 1) or booking (phase 2). */
-  book(tripId: string, userId: string): Promise<Result>;
+  book(tripId: string, userId: string, options?: BookOptions): Promise<Result>;
   cancel(tripId: string, userId: string): Promise<Result>;
+  /** Admin: assigns a booking to a bus (null = unassigned). */
+  setBookingBus(bookingId: string, bus: number | null): Promise<Result>;
 
   saveNews(id: string | null, input: NewsInput, authorId: string): Promise<Result>;
   deleteNews(id: string): Promise<Result>;

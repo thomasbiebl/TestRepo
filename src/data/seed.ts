@@ -39,28 +39,29 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
       id: 'augsburg', title: 'Augsburg (A)', departure: iso(now + 12 * DAY), meetingPoint: 'Parkplatz Stadion',
       price: 28, seats: 4, notes: 'Bitte 15 Minuten vor Abfahrt am Bus sein. Getränke bitte selbst mitbringen.',
       kickoff: iso(now + 12 * DAY + 5 * HOUR), returnTime: iso(now + 12 * DAY + 14 * HOUR),
+      stops: ['Parkplatz Stadion', 'Bahnhof Nord'], buses: 1,
       createdAt: iso(now - (3 * DAY - 30 * HOUR)),
       interestEndsAt: interestEndFor(iso(now - (3 * DAY - 30 * HOUR))),
     },
     {
       id: 'leipzig', title: 'Leipzig (A)', departure: iso(now + 30 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 45, seats: 6, notes: '', createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
+      price: 45, seats: 6, notes: '', stops: [], buses: 1, createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
     },
     {
       id: 'dortmund', title: 'Dortmund (A)', departure: iso(now + 45 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 38, seats: 3, notes: '', createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
+      price: 38, seats: 3, notes: '', stops: [], buses: 1, createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
     },
   ];
 
   const b = (tripId: string, userId: string, status: Booking['status'], ago: number): Booking => ({
-    id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(now - ago),
+    id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(now - ago), companions: 0, companionNames: '',
     queuedAt: status === 'waitlist' ? iso(now - ago) : undefined,
   });
   const bookings: Booking[] = [
-    b('augsburg', 'sophie', 'interested', 40 * HOUR),
-    b('augsburg', 'karl', 'interested', 30 * HOUR),
-    b('augsburg', 'max', 'interested', 20 * HOUR),
-    b('augsburg', 'julia', 'interested', 10 * HOUR),
+    { ...b('augsburg', 'sophie', 'interested', 40 * HOUR), stop: 'Bahnhof Nord' },
+    { ...b('augsburg', 'karl', 'interested', 30 * HOUR), stop: 'Parkplatz Stadion', companions: 1, companionNames: 'Petra' },
+    { ...b('augsburg', 'max', 'interested', 20 * HOUR), stop: 'Parkplatz Stadion' },
+    { ...b('augsburg', 'julia', 'interested', 10 * HOUR), stop: 'Bahnhof Nord' },
     b('leipzig', 'max', 'confirmed', 4 * DAY),
     b('leipzig', 'julia', 'confirmed', 4 * DAY),
     b('leipzig', 'karl', 'confirmed', 3 * DAY),

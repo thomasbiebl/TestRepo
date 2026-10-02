@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { PhaseBadge, StatusBadge, fmtDate } from '../components/ui';
 import type { TripInput } from '../data/DataService';
-import { byTrip, getTripPhase, pastTripCount } from '../domain/rules';
+import { byTrip, confirmedCount, getTripPhase, pastTripCount } from '../domain/rules';
 import type { Settings, Trip } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
@@ -12,12 +12,12 @@ const toLocalInput = (iso: string) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string; kickoff: string; returnTime: string; notes: string }
+interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string; kickoff: string; returnTime: string; notes: string; stops: string; buses: string }
 
 const emptyForm = (s: Settings): FormState => {
   const d = new Date(Date.now() + 14 * 86_400_000);
   d.setHours(8, 0, 0, 0);
-  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats), kickoff: '', returnTime: '', notes: '' };
+  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats), kickoff: '', returnTime: '', notes: '', stops: '', buses: '1' };
 };
 
 function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmit: (i: TripInput) => void; onCancel: () => void }) {
@@ -34,6 +34,8 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
       kickoff: f.kickoff ? new Date(f.kickoff).toISOString() : undefined,
       returnTime: f.returnTime ? new Date(f.returnTime).toISOString() : undefined,
       notes: f.notes.trim(),
+      stops: [...new Set(f.stops.split('\n').map((x) => x.trim()).filter(Boolean))],
+      buses: Math.floor(Number(f.buses) || 1),
     });
   };
   return (
@@ -58,6 +60,14 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
       <input id="t-kick" type="datetime-local" value={f.kickoff} onChange={set('kickoff')} />
       <label htmlFor="t-ret">Rückfahrt (optional)</label>
       <input id="t-ret" type="datetime-local" value={f.returnTime} onChange={set('returnTime')} />
+      <div className="row">
+        <div className="grow">
+          <label htmlFor="t-buses">Busse</label>
+          <input id="t-buses" type="number" min={1} max={10} required value={f.buses} onChange={set('buses')} />
+        </div>
+      </div>
+      <label htmlFor="t-stops">Zustiegsstellen (eine pro Zeile, optional)</label>
+      <textarea id="t-stops" rows={3} placeholder={'Parkplatz Stadion\nBahnhof Nord'} value={f.stops} onChange={set('stops')} />
       <label htmlFor="t-notes">Hinweise für Mitfahrer (optional)</label>
       <textarea id="t-notes" rows={3} value={f.notes} onChange={set('notes')} />
       <button className="btn">Speichern</button>
@@ -87,7 +97,7 @@ export function AdminTrips() {
       <h1 className="title">Fahrten</h1>
       {editing ? (
         <TripForm
-          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats), kickoff: editing.kickoff ? toLocalInput(editing.kickoff) : '', returnTime: editing.returnTime ? toLocalInput(editing.returnTime) : '', notes: editing.notes }}
+          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats), kickoff: editing.kickoff ? toLocalInput(editing.kickoff) : '', returnTime: editing.returnTime ? toLocalInput(editing.returnTime) : '', notes: editing.notes, stops: editing.stops.join('\n'), buses: String(editing.buses) }}
           onSubmit={(i) => void save(editing === 'new' ? null : editing.id, i)}
           onCancel={() => setEditing(null)}
         />
@@ -104,7 +114,7 @@ export function AdminTrips() {
             <section key={t.id} className="card">
               <div className="row between">
                 <PhaseBadge phase={phase} />
-                <span className="muted">{list.filter((b) => b.status === 'confirmed').length} / {t.seats} bestätigt</span>
+                <span className="muted">{confirmedCount(snap.bookings, t.id)} / {t.seats} bestätigt</span>
               </div>
               <h3>{t.title}</h3>
               <div className="muted">{fmtDate(t.departure)} · {list.filter((b) => b.status === 'interested').length} Interessenten · {list.filter((b) => b.status === 'waitlist').length} Warteliste</div>
@@ -141,8 +151,27 @@ export function AdminTrips() {
                       const u = users.get(b.userId);
                       return (
                         <li key={b.id}>
-                          <span>{u?.name ?? 'Unbekannt'} <small className="muted">· {u ? pastTripCount(u, snap.trips, snap.bookings, now) : 0} Fahrten{u && !u.isMember ? ' · Gast' : ''}</small></span>
-                          <StatusBadge status={b.status} />
+                          <span>
+                            {u?.name ?? 'Unbekannt'}
+                            <small className="muted">
+                              {' '}· {u ? pastTripCount(u, snap.trips, snap.bookings, now) : 0} Fahrten{u && !u.isMember ? ' · Gast' : ''}
+                              {b.companions > 0 ? ` · +${b.companions}${b.companionNames ? ` (${b.companionNames})` : ''}` : ''}
+                              {b.stop ? ` · ${b.stop}` : ''}
+                            </small>
+                          </span>
+                          <span className="chips">
+                            {b.status === 'confirmed' && t.buses > 1 && (
+                              <select
+                                aria-label={`Bus für ${u?.name ?? 'Buchung'}`}
+                                value={b.bus ?? ''}
+                                onChange={(e) => void act(() => data.setBookingBus(b.id, e.target.value ? Number(e.target.value) : null))}
+                              >
+                                <option value="">Bus?</option>
+                                {Array.from({ length: t.buses }, (_, i) => <option key={i + 1} value={i + 1}>Bus {i + 1}</option>)}
+                              </select>
+                            )}
+                            <StatusBadge status={b.status} />
+                          </span>
                         </li>
                       );
                     })}

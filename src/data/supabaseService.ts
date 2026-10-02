@@ -5,10 +5,10 @@ import type { DataService, Result } from './DataService';
 
 // Row shapes as they come from Postgres.
 interface ProfileRow { id: string; email?: string; name: string; is_member: boolean; is_admin?: boolean; member_requested?: boolean; base_trips: number; created_at?: string }
-interface TripRow { id: string; title: string; departure: string; meeting_point: string; price: number | string; seats: number; created_at: string; interest_ends_at: string; allocated_at: string | null; kickoff: string | null; return_time: string | null; notes: string; cancelled_at: string | null; cancel_reason: string | null }
-interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null }
+interface TripRow { id: string; title: string; departure: string; meeting_point: string; price: number | string; seats: number; created_at: string; interest_ends_at: string; allocated_at: string | null; kickoff: string | null; return_time: string | null; notes: string; cancelled_at: string | null; cancel_reason: string | null; stops: string[] | null; buses: number }
+interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null; companions: number; companion_names: string; stop: string | null; bus: number | null }
 interface NewsRow { id: string; title: string; body: string; author_id: string | null; pinned: boolean; created_at: string; updated_at: string | null }
-interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number }
+interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number; max_companions: number }
 
 const toUser = (r: ProfileRow): User => ({
   id: r.id, email: r.email ?? '', name: r.name, passwordHash: '', isMember: r.is_member, isAdmin: r.is_admin ?? false,
@@ -19,9 +19,11 @@ const toTrip = (r: TripRow): Trip => ({
   createdAt: r.created_at, interestEndsAt: r.interest_ends_at, allocatedAt: r.allocated_at ?? undefined,
   kickoff: r.kickoff ?? undefined, returnTime: r.return_time ?? undefined, notes: r.notes ?? '',
   cancelledAt: r.cancelled_at ?? undefined, cancelReason: r.cancel_reason ?? undefined,
+  stops: r.stops ?? [], buses: r.buses,
 });
 const toBooking = (r: BookingRow): Booking => ({
   id: r.id, tripId: r.trip_id, userId: r.user_id, status: r.status, createdAt: r.created_at, queuedAt: r.queued_at ?? undefined,
+  companions: r.companions, companionNames: r.companion_names, stop: r.stop ?? undefined, bus: r.bus ?? undefined,
 });
 const toNews = (r: NewsRow): NewsPost => ({
   id: r.id, title: r.title, body: r.body, authorId: r.author_id ?? '', pinned: r.pinned, createdAt: r.created_at, updatedAt: r.updated_at ?? undefined,
@@ -30,7 +32,7 @@ const toSettings = (r: SettingsRow | null): Settings =>
   r ? {
     clubName: r.club_name, interestDays: r.interest_days, guestsMayBook: r.guests_may_book, waitlistEnabled: r.waitlist_enabled,
     defaultSeats: r.default_seats, defaultPrice: Number(r.default_price), defaultMeetingPoint: r.default_meeting_point,
-    cancelDeadlineHours: r.cancel_deadline_hours,
+    cancelDeadlineHours: r.cancel_deadline_hours, maxCompanions: r.max_companions,
   } : { ...DEFAULT_SETTINGS };
 
 const ok: Result = { ok: true };
@@ -94,6 +96,7 @@ export class SupabaseService implements DataService {
     const row = {
       title: input.title, departure: input.departure, meeting_point: input.meetingPoint, price: input.price, seats: input.seats,
       notes: input.notes, kickoff: input.kickoff ?? null, return_time: input.returnTime ?? null,
+      stops: input.stops, buses: input.buses,
     };
     const { error } = id === null ? await this.sb.from('trips').insert(row) : await this.sb.from('trips').update(row).eq('id', id);
     return fail(error);
@@ -108,7 +111,16 @@ export class SupabaseService implements DataService {
     fail((await this.sb.rpc('admin_end_interest', { p_trip: tripId })).error);
 
   // The user comes from the session on the server, so the id argument is not needed here.
-  book: DataService['book'] = async (tripId) => fail((await this.sb.rpc('book_trip', { p_trip: tripId })).error);
+  book: DataService['book'] = async (tripId, _userId, options) =>
+    fail((await this.sb.rpc('book_trip', {
+      p_trip: tripId,
+      p_companions: options?.companions ?? 0,
+      p_names: options?.companionNames ?? '',
+      p_stop: options?.stop ?? null,
+    })).error);
+
+  setBookingBus: DataService['setBookingBus'] = async (bookingId, bus) =>
+    fail((await this.sb.rpc('admin_set_booking_bus', { p_booking: bookingId, p_bus: bus })).error);
 
   cancel: DataService['cancel'] = async (tripId) => fail((await this.sb.rpc('cancel_booking', { p_trip: tripId })).error);
 
@@ -133,6 +145,7 @@ export class SupabaseService implements DataService {
       club_name: clean.clubName, interest_days: clean.interestDays, guests_may_book: clean.guestsMayBook,
       waitlist_enabled: clean.waitlistEnabled, default_seats: clean.defaultSeats, default_price: clean.defaultPrice,
       default_meeting_point: clean.defaultMeetingPoint, cancel_deadline_hours: clean.cancelDeadlineHours,
+      max_companions: clean.maxCompanions,
     }).eq('id', 1);
     return fail(error);
   };
