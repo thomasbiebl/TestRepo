@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Snapshot, type Trip } from '../domain/types';
+import { DEFAULT_SETTINGS, type Snapshot, type Trip, type User } from '../domain/types';
 import { allocateAll, allocateTrip, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
@@ -47,7 +47,7 @@ export class LocalStorageService implements DataService {
   /** Reads, applies a change, hands out due seats and stores the result. */
   private async mutate(fn: (s: Snapshot, now: number) => Snapshot | string): Promise<Result> {
     const now = Date.now();
-    const out = fn(await this.read(), now);
+    const out = fn(allocateAll(await this.read(), now), now);
     if (typeof out === 'string') return fail(out);
     this.write(allocateAll(out, now));
     return ok;
@@ -59,7 +59,7 @@ export class LocalStorageService implements DataService {
     return next === snap ? snap : this.write(next);
   }
 
-  addUser: DataService['addUser'] = (user) =>
+  addUser = (user: User): Promise<Result> =>
     this.mutate((s) =>
       s.users.some((u) => u.email === user.email) ? 'Diese E-Mail-Adresse ist schon registriert.' : { ...s, users: [...s.users, user] },
     );

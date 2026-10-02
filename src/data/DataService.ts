@@ -14,8 +14,6 @@ export interface DataService {
   /** Current data. Also hands out seats for trips whose interest phase has ended. */
   load(): Promise<Snapshot>;
 
-  /** Stores a freshly registered user (a real backend does this in its auth step). */
-  addUser(user: User): Promise<Result>;
   updateUser(id: string, patch: Partial<Pick<User, 'isMember' | 'isAdmin' | 'memberRequested' | 'baseTrips' | 'name'>>): Promise<Result>;
   deleteUser(id: string): Promise<Result>;
 
@@ -33,5 +31,6 @@ export interface DataService {
 
   saveSettings(settings: Settings): Promise<Result>;
 
-  resetDemo(): Promise<void>;
+  /** Demo mode only. */
+  resetDemo?(): Promise<void>;
 }

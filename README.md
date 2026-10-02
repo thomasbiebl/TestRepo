@@ -2,7 +2,10 @@
 
 Web-App (PWA) für die Busfahrten eines Fanclubs: Mitglieder bekunden zuerst Interesse, die Plätze werden automatisch nach bisherigen Fahrten vergeben, danach können alle Restplätze buchen.
 
-Aktueller Stand: **Phase 1 ohne Datenbank.** Alle Daten liegen im Browser (localStorage). So lässt sich die App direkt auf dem Handy ausprobieren.
+Die App läuft in zwei Modi:
+
+- **Demo-Modus** (Standard): Alle Daten liegen im Browser (localStorage), der Login ist nur zum Ausprobieren.
+- **Echtbetrieb mit Supabase**: Datenbank und sichere Anmeldung. Einrichtung in [docs/SUPABASE.md](docs/SUPABASE.md). Sobald `SUPABASE_URL` und `SUPABASE_ANON_KEY` gesetzt sind, schaltet die App automatisch um.
 
 ## Ablauf einer Fahrt
 
@@ -14,7 +17,7 @@ Als „bisherige Fahrten“ zählen bestätigte Plätze auf abgefahrenen Fahrten
 
 ## Funktionen
 
-- Registrierung und Anmeldung mit E-Mail und Passwort (Demo-Login, nicht sicher)
+- Registrierung und Anmeldung mit E-Mail und Passwort, Passwort zurücksetzen per E-Mail (nur mit Supabase)
 - Mitgliederverwaltung: Registrierte können eine Mitgliedschaft anfragen, Admins bestätigen
 - Fahrten ansehen, Interesse bekunden, buchen, stornieren, Wartelistenplatz sehen
 - Admin-Bereich: Fahrten anlegen, bearbeiten, löschen, Teilnehmer ansehen, Benutzer verwalten
@@ -38,7 +41,7 @@ Im Admin-Bereich setzt „Demo-Daten zurücksetzen“ alles zurück. Mit „Inte
 ```bash
 npm ci
 npm run dev        # Entwicklungsserver
-npm test           # Regel-Tests (Vitest)
+npm test           # Regel-Tests (Vitest), inkl. SQL-Tests
 npm run build      # Typecheck + Produktions-Build nach dist/
 npm run preview    # gebauten Stand ansehen
 ```
@@ -59,8 +62,12 @@ Einmalig einrichten: *Settings → Pages → Source: GitHub Actions*. Für Branc
 - `src/themes/` – Designs als CSS-Variablen. Neues Design: CSS-Datei mit `:root[data-theme='<id>']` anlegen, in `main.tsx` importieren und in `themes/index.ts` eintragen
 - `mockups/` – statische Design-Entwürfe
 
-## Später: Datenbank und echte Anmeldung
+## Datenbank und Anmeldung (Supabase)
 
-Die App greift nur über `DataService` und `AuthService` auf Daten zu. Für den Echtbetrieb genügt es, dafür neue Umsetzungen zu schreiben und in `src/state/AppContext.tsx` einzutragen. Empfehlung für einen gemeinnützigen Verein: **Supabase** im kostenlosen Tarif (Postgres, Anmeldung mit E-Mail und OpenID Connect, Zugriffsregeln pro Zeile, geplante Jobs für die automatische Platzvergabe). Die Vergabe läuft dann serverseitig, die Regeln aus `src/domain/rules.ts` dienen als Vorlage.
+Die App greift nur über `DataService` und `AuthService` auf Daten zu. Dafür gibt es zwei Umsetzungen: browserlokal (`localStorageService.ts`, `localAuth.ts`) und Supabase (`supabaseService.ts`, `supabaseAuth.ts`). `src/services.ts` wählt anhand der Umgebungsvariablen aus.
 
-Weitere Ideen: Benachrichtigungen bei Platzvergabe, Bezahlung, Veröffentlichung als App über Capacitor oder TWA.
+Beim Echtbetrieb liegen die Regeln in der Datenbank (`supabase/migrations/0001_init.sql`): Platzvergabe, Warteliste, Zugriffsrechte. Die Vergabe läuft serverseitig, bei Bedarf alle 5 Minuten per `pg_cron`, und `src/domain/rules.ts` spiegelt dieselben Regeln für die Anzeige. Die SQL-Regeln sind mit `npm test` gegen eine echte Postgres-Engine (PGlite) getestet.
+
+Kosten: GitHub Pages und der kostenlose Supabase-Tarif reichen für rund 500 Nutzer. `keepalive.yml` verhindert die Pausierung, `backup.yml` sichert wöchentlich verschlüsselt.
+
+Weitere Ideen: Anmeldung mit Google, Apple oder Facebook (OpenID Connect), Benachrichtigungen bei Platzvergabe, Bezahlung, Veröffentlichung als App über Capacitor oder TWA.

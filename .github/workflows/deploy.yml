@@ -28,6 +28,9 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # Ohne diese Variablen entsteht die Demo-Version (siehe docs/SUPABASE.md).
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
       - run: cp -r mockups dist/mockups
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

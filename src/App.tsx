@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminHome } from './pages/AdminHome';
 import { AdminNews } from './pages/AdminNews';
 import { AdminSettings } from './pages/AdminSettings';
 import { AdminTrips } from './pages/AdminTrips';
 import { AdminUsers } from './pages/AdminUsers';
-import { Login, Register } from './pages/AuthPages';
+import { ForgotPassword, Login, Register, ResetPassword } from './pages/AuthPages';
 import { MyBookings } from './pages/MyBookings';
 import { News } from './pages/News';
 import { Profile } from './pages/Profile';
@@ -27,7 +27,9 @@ function RequireAdmin() {
 }
 
 export function App() {
-  const { toast, snap } = useApp();
+  const { toast, snap, auth } = useApp();
+  const nav = useNavigate();
+  useEffect(() => auth.onPasswordRecovery?.(() => nav('/reset-password', { replace: true })), [auth, nav]);
   const clubName = snap?.settings.clubName;
   useEffect(() => {
     document.title = clubName ? `${clubName} Busfahrten` : 'Busfahrten';
@@ -37,6 +39,8 @@ export function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<RequireUser />}>
           <Route index element={<Trips />} />
           <Route path="trip/:id" element={<TripDetail />} />

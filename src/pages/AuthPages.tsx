@@ -35,7 +35,7 @@ export function Login() {
     const res = await auth.login(email, password);
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    setSessionUser(res.user.id);
+    setSessionUser(res.userId);
     await reload();
     nav('/', { replace: true });
   };
@@ -58,8 +58,9 @@ export function Login() {
       </form>
       <p className="muted center">
         Noch kein Konto? <Link to="/register">Registrieren</Link>
+        {auth.resetPassword && <> · <Link to="/forgot-password">Passwort vergessen?</Link></>}
       </p>
-      <div className="card demo">
+      {auth.isDemo && <div className="card demo">
         <b>Demo-Zugänge</b>
         <p className="muted">Die Daten liegen nur in diesem Browser. Tippen zum Ausfüllen:</p>
         <div className="chips">
@@ -67,7 +68,7 @@ export function Login() {
           <button type="button" className="chip" onClick={() => fill('anna@fanclub.test', DEMO_PASSWORD)}>Mitglied (Anna)</button>
           <button type="button" className="chip" onClick={() => fill('lukas@fanclub.test', DEMO_PASSWORD)}>Kein Mitglied (Lukas)</button>
         </div>
-      </div>
+      </div>}
     </AuthFrame>
   );
 }
@@ -78,6 +79,7 @@ export function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '', wantsMembership: false });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
@@ -87,10 +89,22 @@ export function Register() {
     const res = await auth.register(form);
     setBusy(false);
     if (!res.ok) return setError(res.error);
-    setSessionUser(res.user.id);
+    if (!res.userId) return setConfirmEmail(true);
+    setSessionUser(res.userId);
     await reload();
     nav('/', { replace: true });
   };
+
+  if (confirmEmail) {
+    return (
+      <AuthFrame title="Fast geschafft">
+        <p className="notice">
+          Wir haben dir eine E-Mail an <b>{form.email}</b> geschickt. Bitte öffne den Link darin, um dein Konto zu bestätigen. Danach kannst du dich anmelden.
+        </p>
+        <Link className="btn" to="/login">Zur Anmeldung</Link>
+      </AuthFrame>
+    );
+  }
 
   return (
     <AuthFrame title="Registrieren">
@@ -111,6 +125,64 @@ export function Register() {
       <p className="muted center">
         Schon registriert? <Link to="/login">Anmelden</Link>
       </p>
+    </AuthFrame>
+  );
+}
+
+export function ForgotPassword() {
+  const { auth } = useApp();
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    const res = await auth.resetPassword?.(email);
+    if (res && !res.ok) return setError(res.error);
+    setSent(true);
+  };
+
+  return (
+    <AuthFrame title="Passwort zurücksetzen">
+      {sent ? (
+        <p className="notice">Wenn die Adresse bei uns registriert ist, haben wir dir einen Link zum Zurücksetzen geschickt.</p>
+      ) : (
+        <form onSubmit={submit} className="form">
+          <label htmlFor="email">E-Mail</label>
+          <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          {error && <p className="error" role="alert">{error}</p>}
+          <button className="btn">Link senden</button>
+        </form>
+      )}
+      <p className="muted center"><Link to="/login">Zur Anmeldung</Link></p>
+    </AuthFrame>
+  );
+}
+
+export function ResetPassword() {
+  const { auth, reload, notify } = useApp();
+  const nav = useNavigate();
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (password.length < 6) return setError('Das Passwort braucht mindestens 6 Zeichen.');
+    const res = await auth.updatePassword?.(password);
+    if (res && !res.ok) return setError(res.error);
+    notify('Passwort geändert.');
+    await reload();
+    nav('/', { replace: true });
+  };
+
+  return (
+    <AuthFrame title="Neues Passwort">
+      <form onSubmit={submit} className="form">
+        <label htmlFor="password">Neues Passwort (mind. 6 Zeichen)</label>
+        <input id="password" type="password" autoComplete="new-password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+        {error && <p className="error" role="alert">{error}</p>}
+        <button className="btn">Passwort speichern</button>
+      </form>
     </AuthFrame>
   );
 }

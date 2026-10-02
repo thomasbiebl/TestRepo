@@ -26,11 +26,15 @@ export function AdminHome() {
         <Link className="btn ghost" to="/admin/news">News verwalten</Link>
         <Link className="btn ghost" to="/admin/settings">Einstellungen</Link>
       </div>
-      <h2 className="sub">Testhilfen</h2>
-      <p className="muted">Setzt alle Daten in diesem Browser auf die Demo-Daten zurück.</p>
-      <button className="btn ghost" onClick={() => void data.resetDemo().then(() => act(async () => ({ ok: true }), 'Demo-Daten wiederhergestellt.'))}>
-        Demo-Daten zurücksetzen
-      </button>
+      {data.resetDemo && (
+        <>
+          <h2 className="sub">Testhilfen</h2>
+          <p className="muted">Setzt alle Daten in diesem Browser auf die Demo-Daten zurück.</p>
+          <button className="btn ghost" onClick={() => void data.resetDemo?.().then(() => act(async () => ({ ok: true }), 'Demo-Daten wiederhergestellt.'))}>
+            Demo-Daten zurücksetzen
+          </button>
+        </>
+      )}
     </>
   );
 }

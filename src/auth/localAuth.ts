@@ -1,5 +1,5 @@
-import type { DataService } from '../data/DataService';
 import { hashPassword } from '../data/seed';
+import type { LocalStorageService } from '../data/localStorageService';
 import type { User } from '../domain/types';
 import type { AuthService } from './AuthService';
 
@@ -7,10 +7,16 @@ const SESSION_KEY = 'fanclub.session.v1';
 
 /**
  * Demo login: users and password hashes live in the browser. This is NOT secure and only
- * meant for trying the app. Replace with a real auth provider (e.g. Supabase) later.
+ * meant for trying the app. Production uses SupabaseAuth.
  */
 export class LocalAuth implements AuthService {
-  constructor(private data: DataService) {}
+  readonly isDemo = true;
+
+  constructor(private data: LocalStorageService) {}
+
+  async restore() {
+    return this.currentUserId();
+  }
 
   currentUserId(): string | null {
     try {
@@ -36,7 +42,7 @@ export class LocalAuth implements AuthService {
       return { ok: false as const, error: 'E-Mail oder Passwort stimmt nicht.' };
     }
     this.setSession(user.id);
-    return { ok: true as const, user };
+    return { ok: true as const, userId: user.id };
   }
 
   async register(input: { name: string; email: string; password: string; wantsMembership: boolean }) {
@@ -45,8 +51,6 @@ export class LocalAuth implements AuthService {
     if (!name) return { ok: false as const, error: 'Bitte einen Namen angeben.' };
     if (!/^\S+@\S+\.\S+$/.test(email)) return { ok: false as const, error: 'Bitte eine gültige E-Mail-Adresse angeben.' };
     if (input.password.length < 6) return { ok: false as const, error: 'Das Passwort braucht mindestens 6 Zeichen.' };
-    const snap = await this.data.load();
-    if (snap.users.some((u) => u.email === email)) return { ok: false as const, error: 'Diese E-Mail-Adresse ist schon registriert.' };
 
     const user: User = {
       id: crypto.randomUUID?.() ?? `${Date.now()}`,
@@ -56,7 +60,7 @@ export class LocalAuth implements AuthService {
     const stored = await this.data.addUser(user);
     if (!stored.ok) return { ok: false as const, error: stored.error };
     this.setSession(user.id);
-    return { ok: true as const, user };
+    return { ok: true as const, userId: user.id };
   }
 
   logout() {
