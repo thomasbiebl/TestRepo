@@ -39,22 +39,22 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
       id: 'augsburg', title: 'Augsburg (A)', departure: iso(now + 12 * DAY), meetingPoint: 'Parkplatz Stadion',
       price: 28, seats: 4, notes: 'Bitte 15 Minuten vor Abfahrt am Bus sein. Getränke bitte selbst mitbringen.',
       kickoff: iso(now + 12 * DAY + 5 * HOUR), returnTime: iso(now + 12 * DAY + 14 * HOUR),
-      stops: ['Parkplatz Stadion', 'Bahnhof Nord'], buses: 1,
+      stops: ['Parkplatz Stadion', 'Bahnhof Nord'], buses: 1, points: 1,
       createdAt: iso(now - (3 * DAY - 30 * HOUR)),
       interestEndsAt: interestEndFor(iso(now - (3 * DAY - 30 * HOUR))),
     },
     {
       id: 'leipzig', title: 'Leipzig (A)', departure: iso(now + 30 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 45, seats: 6, notes: '', stops: [], buses: 1, createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
+      price: 45, seats: 6, notes: '', stops: [], buses: 1, points: 2, createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
     },
     {
       id: 'dortmund', title: 'Dortmund (A)', departure: iso(now + 45 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 38, seats: 3, notes: '', stops: [], buses: 1, createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
+      price: 38, seats: 3, notes: '', stops: [], buses: 1, points: 1, createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
     },
   ];
 
   const b = (tripId: string, userId: string, status: Booking['status'], ago: number): Booking => ({
-    id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(now - ago), companions: 0, companionNames: '',
+    id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(now - ago), companions: 0, companionNames: '', paid: false,
     queuedAt: status === 'waitlist' ? iso(now - ago) : undefined,
   });
   const bookings: Booking[] = [

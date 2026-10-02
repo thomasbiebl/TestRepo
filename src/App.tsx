@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { AdminHome } from './pages/AdminHome';
 import { AdminNews } from './pages/AdminNews';
 import { AdminSettings } from './pages/AdminSettings';
+import { AdminTripList } from './pages/AdminTripList';
 import { AdminTrips } from './pages/AdminTrips';
 import { AdminUsers } from './pages/AdminUsers';
 import { ForgotPassword, Login, Register, ResetPassword } from './pages/AuthPages';
@@ -50,6 +51,7 @@ export function App() {
           <Route element={<RequireAdmin />}>
             <Route path="admin" element={<AdminHome />} />
             <Route path="admin/trips" element={<AdminTrips />} />
+            <Route path="admin/trips/:id/list" element={<AdminTripList />} />
             <Route path="admin/users" element={<AdminUsers />} />
             <Route path="admin/news" element={<AdminNews />} />
             <Route path="admin/settings" element={<AdminSettings />} />

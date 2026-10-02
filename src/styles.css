@@ -127,3 +127,20 @@ textarea { width: 100%; background: var(--surface-2); border: 1px solid var(--bo
 .danger-zone { border-color: color-mix(in srgb, var(--primary) 50%, var(--border)); }
 select { width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; color: var(--fg); font: inherit; }
 .people select { width: auto; padding: 6px 8px; font-size: 13px; }
+
+.pax-list { list-style: none; margin: 4px 0 0; padding: 0; }
+.pax { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.pax-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 160px; overflow-wrap: anywhere; }
+.pax-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.seg { display: flex; gap: 6px; }
+.chip[aria-pressed='true'] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.print-only { display: none; }
+a.chip { text-decoration: none; display: inline-block; }
+
+@media print {
+  html[data-theme] { --bg: #fff !important; --surface: #fff !important; --surface-2: #fff !important; --fg: #000 !important; --muted: #333 !important; --border: #999 !important; --primary: #000 !important; }
+  .tabs, .top, .toast, .no-print { display: none !important; }
+  .print-only { display: block; }
+  .shell { max-width: none; }
+  .card { box-shadow: none; break-inside: avoid; }
+}

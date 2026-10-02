@@ -4,7 +4,7 @@ export type Result = { ok: true } | { ok: false; error: string };
 
 export type NewsInput = Pick<NewsPost, 'title' | 'body' | 'pinned'>;
 
-export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats' | 'notes' | 'kickoff' | 'returnTime' | 'stops' | 'buses'>;
+export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats' | 'notes' | 'kickoff' | 'returnTime' | 'stops' | 'buses' | 'points'>;
 
 /**
  * Everything the UI needs from storage. The local implementation keeps data in the browser;
@@ -33,6 +33,10 @@ export interface DataService {
   cancel(tripId: string, userId: string): Promise<Result>;
   /** Admin: assigns a booking to a bus (null = unassigned). */
   setBookingBus(bookingId: string, bus: number | null): Promise<Result>;
+  /** Admin: marks a booking as paid or open. */
+  setBookingPaid(bookingId: string, paid: boolean): Promise<Result>;
+  /** Admin: boarded (true), did not show up (false), or not recorded (null). */
+  setBookingAttendance(bookingId: string, attended: boolean | null): Promise<Result>;
 
   saveNews(id: string | null, input: NewsInput, authorId: string): Promise<Result>;
   deleteNews(id: string): Promise<Result>;

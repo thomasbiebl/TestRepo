@@ -3,7 +3,7 @@ import { validateSettings } from '../domain/rules';
 import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
-type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions', string> &
+type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions' | 'noShowPenalty', string> &
   Pick<Settings, 'guestsMayBook' | 'waitlistEnabled'>;
 
 const toDraft = (s: Settings): Draft => ({
@@ -11,6 +11,7 @@ const toDraft = (s: Settings): Draft => ({
   interestDays: String(s.interestDays),
   cancelDeadlineHours: String(s.cancelDeadlineHours),
   maxCompanions: String(s.maxCompanions),
+  noShowPenalty: String(s.noShowPenalty),
   defaultSeats: String(s.defaultSeats),
   defaultPrice: String(s.defaultPrice),
   defaultMeetingPoint: s.defaultMeetingPoint,
@@ -23,6 +24,7 @@ const fromDraft = (d: Draft): Settings => ({
   interestDays: Number(d.interestDays),
   cancelDeadlineHours: Number(d.cancelDeadlineHours),
   maxCompanions: Number(d.maxCompanions),
+  noShowPenalty: Number(d.noShowPenalty),
   defaultSeats: Number(d.defaultSeats),
   defaultPrice: Number(d.defaultPrice),
   defaultMeetingPoint: d.defaultMeetingPoint,
@@ -72,6 +74,9 @@ export function AdminSettings() {
           <label htmlFor="s-comp">Begleitpersonen pro Buchung (höchstens)</label>
           <input id="s-comp" type="number" inputMode="numeric" min={0} max={10} step={1} required value={d.maxCompanions} onChange={set('maxCompanions')} />
           <p className="muted">0 schaltet Begleitpersonen aus. Jede Begleitperson belegt einen Platz, die Rangfolge richtet sich nach der buchenden Person.</p>
+          <label htmlFor="s-noshow">Abzug bei Nichterscheinen (Punkte)</label>
+          <input id="s-noshow" type="number" inputMode="numeric" min={0} max={10} step={1} required value={d.noShowPenalty} onChange={set('noShowPenalty')} />
+          <p className="muted">Wer als „nicht erschienen“ markiert wird, bekommt für diese Fahrt keine Punkte und verliert so viele Punkte für die Rangfolge. 0 schaltet den Abzug aus.</p>
           <label className="check" htmlFor="s-wait">
             <input id="s-wait" type="checkbox" checked={d.waitlistEnabled} onChange={(e) => setDraft({ ...d, waitlistEnabled: e.target.checked })} />
             Warteliste bei ausgebuchten Fahrten

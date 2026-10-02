@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '../components/ui';
 import { buildMyExport } from '../domain/exports';
-import { pastTripCount } from '../domain/rules';
+import { noShowCount, pastTripCount, userScore } from '../domain/rules';
 import { downloadFile } from '../lib/download';
 import { useApp } from '../state/AppContext';
 import { THEMES } from '../themes';
@@ -63,7 +63,10 @@ export function Profile() {
             {user.isMember ? <Badge tone="green">Mitglied</Badge> : user.memberRequested ? <Badge>Mitgliedschaft in Prüfung</Badge> : <Badge>Kein Mitglied</Badge>}
             {user.isAdmin && <Badge tone="red">Admin</Badge>}
           </div>
-          <p className="muted">Bisherige Fahrten: <b>{pastTripCount(user, snap.trips, snap.bookings, now)}</b></p>
+          <p className="muted">
+            Bisherige Fahrten: <b>{pastTripCount(user, snap.trips, snap.bookings, now)}</b> · Punkte für die Platzvergabe: <b>{userScore(user, snap.trips, snap.bookings, now, snap.settings)}</b>
+            {noShowCount(user, snap.trips, snap.bookings, now) > 0 && ` · Nicht erschienen: ${noShowCount(user, snap.trips, snap.bookings, now)}`}
+          </p>
         </section>
 
         <form className="card form" onSubmit={saveName}>

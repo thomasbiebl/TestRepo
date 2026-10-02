@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { buildMyExport } from '../src/domain/exports';
 import { buildIcs } from '../src/domain/ics';
+import { buildParticipantCsv, passengersByBus } from '../src/domain/participants';
 import {
-  allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
+  allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, noShowCount, pastTripCount, promoteWaitlist, tripTotals, userScore, validateSettings, waitlistOf,
 } from '../src/domain/rules';
 import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
@@ -15,11 +16,11 @@ const user = (id: string, o: Partial<User> = {}): User => ({
   memberRequested: false, baseTrips: 0, createdAt: iso(T0), ...o,
 });
 const trip = (o: Partial<Trip> = {}): Trip => ({
-  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '', stops: [], buses: 1,
+  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '', stops: [], buses: 1, points: 1,
   createdAt: iso(T0), interestEndsAt: interestEndFor(iso(T0)), ...o,
 });
 const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1'): Booking => ({
-  id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '',
+  id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '', paid: false,
 });
 const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
   users, trips, bookings, news: [], settings: { ...DEFAULT_SETTINGS, ...settings },
@@ -234,5 +235,67 @@ describe('companions and boarding points', () => {
     const plain = trip();
     const noStop = createBooking(snap([m], [plain], []), plain, m, T0 + DAY, 'x', { companions: 0, companionNames: '', stop: 'Egal' });
     expect(noStop.ok && noStop.booking.stop).toBeUndefined();
+  });
+});
+
+describe('points, no-shows and payment', () => {
+  const past = (id: string, points = 1, o: Partial<Trip> = {}) => trip({ id, departure: iso(T0 - DAY), points, ...o });
+  const seat = (userId: string, tripId: string, attended?: boolean): Booking => ({ ...booking(userId, 'confirmed', -DAY, tripId), attended });
+
+  it('earns the points of each trip taken and ignores cancelled trips', () => {
+    const u = user('a', { baseTrips: 2 });
+    const trips = [past('p1', 3), past('p2', 1), past('p3', 5, { cancelledAt: iso(T0 - 2 * DAY) })];
+    const bookings = [seat('a', 'p1'), seat('a', 'p2'), seat('a', 'p3')];
+    expect(userScore(u, trips, bookings, T0, DEFAULT_SETTINGS)).toBe(2 + 3 + 1);
+    expect(pastTripCount(u, trips, bookings, T0)).toBe(4);
+  });
+
+  it('gives nothing for a no-show and deducts the penalty, never below zero', () => {
+    const u = user('a', { baseTrips: 1 });
+    const trips = [past('p1', 2), past('p2', 2)];
+    const bookings = [seat('a', 'p1', true), seat('a', 'p2', false)];
+    expect(userScore(u, trips, bookings, T0, DEFAULT_SETTINGS)).toBe(1 + 2);
+    expect(userScore(u, trips, bookings, T0, { ...DEFAULT_SETTINGS, noShowPenalty: 2 })).toBe(1);
+    expect(userScore(u, trips, bookings, T0, { ...DEFAULT_SETTINGS, noShowPenalty: 10 })).toBe(0);
+    expect(noShowCount(u, trips, bookings, T0)).toBe(1);
+    expect(pastTripCount(u, trips, bookings, T0)).toBe(2);
+  });
+
+  it('ranks interested members by score, so a no-show can lose the seat', () => {
+    const a = user('a', { baseTrips: 5 });
+    const b = user('b', { baseTrips: 5 });
+    const old = past('p1');
+    const settings = { noShowPenalty: 3 };
+    const s = snap([a, b], [old, trip({ seats: 1 })], [seat('a', 'p1', false), seat('b', 'p1', true), booking('a', 'interested', 1), booking('b', 'interested', 2)], settings);
+    const out = allocateTrip(s, 't1', T0 + 3 * DAY);
+    expect(out.bookings.filter((x) => x.tripId === 't1').map((x) => [x.userId, x.status])).toEqual([['a', 'waitlist'], ['b', 'confirmed']]);
+  });
+
+  it('sums up what is expected, paid and open for confirmed bookings only', () => {
+    const t = trip({ price: 25 });
+    const bookings: Booking[] = [
+      { ...booking('a', 'confirmed'), companions: 1, paid: true },
+      { ...booking('b', 'confirmed') },
+      { ...booking('c', 'waitlist') },
+    ];
+    expect(tripTotals(t, bookings)).toEqual({ people: 3, expected: 75, paid: 50, open: 25 });
+  });
+
+  it('builds a passenger list per bus and an Excel friendly CSV', () => {
+    const t = trip({ buses: 2, price: 10 });
+    const users = [user('anna', { name: 'Anna' }), user('bert', { name: 'Bert "B"' }), user('cora', { name: 'Cora' })];
+    const bookings: Booking[] = [
+      { ...booking('anna', 'confirmed'), bus: 2, stop: 'Bahnhof', paid: true, attended: true },
+      { ...booking('bert', 'confirmed'), bus: 1, companions: 1, companionNames: 'Moritz' },
+      { ...booking('cora', 'confirmed') },
+      { ...booking('cora2', 'waitlist') },
+    ];
+    const s = snap(users, [t], bookings);
+    const groups = passengersByBus(t, s);
+    expect([...groups.keys()]).toEqual([1, 2, 0]);
+    const csv = buildParticipantCsv(t, s);
+    expect(csv.startsWith('﻿"Name";"E-Mail"')).toBe(true);
+    expect(csv).toContain('"Bert ""B""";"bert@x.de";"bestätigt";"2";"1";"Moritz";"";"1";"20,00";"nein";""');
+    expect(csv).toContain('"Anna";"anna@x.de";"bestätigt";"1";"0";"";"Bahnhof";"2";"10,00";"ja";"ja"');
   });
 });

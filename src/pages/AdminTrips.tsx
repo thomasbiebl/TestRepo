@@ -12,12 +12,12 @@ const toLocalInput = (iso: string) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string; kickoff: string; returnTime: string; notes: string; stops: string; buses: string }
+interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string; kickoff: string; returnTime: string; notes: string; stops: string; buses: string; points: string }
 
 const emptyForm = (s: Settings): FormState => {
   const d = new Date(Date.now() + 14 * 86_400_000);
   d.setHours(8, 0, 0, 0);
-  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats), kickoff: '', returnTime: '', notes: '', stops: '', buses: '1' };
+  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats), kickoff: '', returnTime: '', notes: '', stops: '', buses: '1', points: '1' };
 };
 
 function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmit: (i: TripInput) => void; onCancel: () => void }) {
@@ -36,6 +36,7 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
       notes: f.notes.trim(),
       stops: [...new Set(f.stops.split('\n').map((x) => x.trim()).filter(Boolean))],
       buses: Math.floor(Number(f.buses) || 1),
+      points: Math.floor(Number(f.points)),
     });
   };
   return (
@@ -64,6 +65,10 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
         <div className="grow">
           <label htmlFor="t-buses">Busse</label>
           <input id="t-buses" type="number" min={1} max={10} required value={f.buses} onChange={set('buses')} />
+        </div>
+        <div className="grow">
+          <label htmlFor="t-points">Punkte für die Rangfolge</label>
+          <input id="t-points" type="number" min={0} max={10} required value={f.points} onChange={set('points')} />
         </div>
       </div>
       <label htmlFor="t-stops">Zustiegsstellen (eine pro Zeile, optional)</label>
@@ -97,7 +102,7 @@ export function AdminTrips() {
       <h1 className="title">Fahrten</h1>
       {editing ? (
         <TripForm
-          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats), kickoff: editing.kickoff ? toLocalInput(editing.kickoff) : '', returnTime: editing.returnTime ? toLocalInput(editing.returnTime) : '', notes: editing.notes, stops: editing.stops.join('\n'), buses: String(editing.buses) }}
+          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats), kickoff: editing.kickoff ? toLocalInput(editing.kickoff) : '', returnTime: editing.returnTime ? toLocalInput(editing.returnTime) : '', notes: editing.notes, stops: editing.stops.join('\n'), buses: String(editing.buses), points: String(editing.points) }}
           onSubmit={(i) => void save(editing === 'new' ? null : editing.id, i)}
           onCancel={() => setEditing(null)}
         />
@@ -120,6 +125,7 @@ export function AdminTrips() {
               <div className="muted">{fmtDate(t.departure)} · {list.filter((b) => b.status === 'interested').length} Interessenten · {list.filter((b) => b.status === 'waitlist').length} Warteliste</div>
               <div className="chips">
                 <button className="chip" onClick={() => setOpen(isOpen ? null : t.id)}>{isOpen ? 'Teilnehmer ausblenden' : 'Teilnehmer'}</button>
+                <Link className="chip" to={`/admin/trips/${t.id}/list`}>Liste &amp; Kasse</Link>
                 <button className="chip" onClick={() => setEditing(t)}>Bearbeiten</button>
                 {phase === 'interest' && <button className="chip" onClick={() => void act(() => data.endInterestNow(t.id), 'Plätze vergeben.')}>Interessensphase beenden</button>}
                 {(phase === 'interest' || phase === 'open') && <button className="chip" onClick={() => { setCancelId(cancelId === t.id ? null : t.id); setReason(''); }}>Fahrt absagen</button>}

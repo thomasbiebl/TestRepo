@@ -38,6 +38,8 @@ export interface Trip {
   stops: string[];
   /** Number of buses. Admins assign passengers to a bus. */
   buses: number;
+  /** Points a confirmed seat earns for the allocation ranking once the trip has taken place. */
+  points: number;
 }
 
 export type BookingStatus = 'interested' | 'confirmed' | 'waitlist';
@@ -57,6 +59,9 @@ export interface Booking {
   stop?: string;
   /** Bus assigned by an admin (1-based). */
   bus?: number;
+  paid: boolean;
+  /** Set by admins at boarding: true = boarded, false = did not show up, undefined = not recorded. */
+  attended?: boolean;
 }
 
 /** What a person chooses when booking. */
@@ -94,6 +99,8 @@ export interface Settings {
   cancelDeadlineHours: number;
   /** How many people one booking may bring along (0 = off). */
   maxCompanions: number;
+  /** Points deducted from the ranking score for each no-show (0 = off). */
+  noShowPenalty: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -106,6 +113,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultMeetingPoint: 'Parkplatz Stadion',
   cancelDeadlineHours: 0,
   maxCompanions: 3,
+  noShowPenalty: 0,
 };
 
 export interface Snapshot {

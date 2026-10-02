@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { Badge, Countdown, PhaseBadge, SeatBar, StatusBadge, fmtDate, fmtPrice, shortName } from '../components/ui';
 import { buildIcs } from '../domain/ics';
-import { byTrip, cancelBlockedReason, confirmedCount, fitsInOrder, freeSeats, getTripPhase, pastTripCount, rankInterested, waitlistOf } from '../domain/rules';
+import { byTrip, cancelBlockedReason, confirmedCount, amountDue, fitsInOrder, freeSeats, getTripPhase, rankInterested, userScore, waitlistOf } from '../domain/rules';
 import { downloadFile } from '../lib/download';
 import { useApp } from '../state/AppContext';
 
@@ -26,7 +26,7 @@ export function TripDetail() {
   const fits = fitsInOrder(ranked.map((r) => r.booking), trip.seats);
   const need = 1 + companions;
   const chosenStop = trip.stops.length ? stop || trip.stops[0] : undefined;
-  const myTrips = pastTripCount(user, snap.trips, snap.bookings, now);
+  const myScore = userScore(user, snap.trips, snap.bookings, now, snap.settings);
   const { guestsMayBook, waitlistEnabled } = snap.settings;
   const mayTry = phase === 'open' ? user.isMember || guestsMayBook : user.isMember;
   const soldOut = phase === 'open' && free === 0 && !waitlistEnabled;
@@ -73,11 +73,16 @@ export function TripDetail() {
             </div>
             <p className="muted">
               {mine.status === 'interested' && (fits[myRank - 1]
-                ? `Du hast ${myTrips} bisherige Fahrten und liegst auf Rang ${myRank} von ${ranked.length}. Bei ${trip.seats} Plätzen bist du aktuell dabei.`
-                : `Du hast ${myTrips} bisherige Fahrten und liegst auf Rang ${myRank} von ${ranked.length}. Aktuell reichen die Plätze (${trip.seats}) nicht bis zu dir.`)}
+                ? `Du hast ${myScore} Punkte und liegst auf Rang ${myRank} von ${ranked.length}. Bei ${trip.seats} Plätzen bist du aktuell dabei.`
+                : `Du hast ${myScore} Punkte und liegst auf Rang ${myRank} von ${ranked.length}. Aktuell reichen die Plätze (${trip.seats}) nicht bis zu dir.`)}
               {mine.status === 'confirmed' && 'Dein Platz ist sicher. Wir freuen uns auf dich.'}
               {mine.status === 'waitlist' && `Du bist auf Platz ${waitPos} der Warteliste und rückst automatisch nach, sobald ein Platz frei wird.`}
             </p>
+            {mine.status === 'confirmed' && (
+              <p className="muted">
+                Fahrpreis: <b>{fmtPrice(amountDue(mine, trip))}</b>{mine.companions > 0 ? ` für ${1 + mine.companions} Plätze` : ''} · {mine.paid ? 'bezahlt ✓' : 'noch offen'}
+              </p>
+            )}
             {(mine.companions > 0 || mine.stop || mine.bus) && (
               <p className="muted">
                 {[
@@ -92,12 +97,12 @@ export function TripDetail() {
 
         {phase === 'interest' && user.isMember && ranked.length > 0 && (
           <section className="card">
-            <h3>Rangliste (bisherige Fahrten)</h3>
+            <h3>Rangliste (Punkte)</h3>
             <ol className="rank">
               {ranked.map((r, i) => (
                 <li key={r.booking.id} className={r.booking.userId === user.id ? 'me' : ''} data-in={fits[i] ? 'true' : 'false'}>
                   <span>{i + 1} · {r.booking.userId === user.id ? 'Du' : shortName(r.user.name)}{r.booking.companions > 0 ? ` +${r.booking.companions}` : ''}</span>
-                  <b>{r.trips}</b>
+                  <b>{r.score}</b>
                 </li>
               ))}
             </ol>

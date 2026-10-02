@@ -12,8 +12,8 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 function migrate(raw: Partial<Snapshot>): Snapshot {
   return {
     users: raw.users ?? [],
-    trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '', stops: t.stops ?? [], buses: t.buses ?? 1 })),
-    bookings: (raw.bookings ?? []).map((b) => ({ ...b, companions: b.companions ?? 0, companionNames: b.companionNames ?? '' })),
+    trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '', stops: t.stops ?? [], buses: t.buses ?? 1, points: t.points ?? 1 })),
+    bookings: (raw.bookings ?? []).map((b) => ({ ...b, companions: b.companions ?? 0, companionNames: b.companionNames ?? '', paid: b.paid ?? false })),
     news: raw.news ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
   };
@@ -103,6 +103,7 @@ export class LocalStorageService implements DataService {
   saveTrip: DataService['saveTrip'] = (id, input: TripInput) =>
     this.mutate((s, now) => {
       if (input.seats < 1) return 'Mindestens ein Platz.';
+      if (!Number.isInteger(input.points) || input.points < 0 || input.points > 10) return 'Die Punkte müssen zwischen 0 und 10 liegen.';
       if (!Number.isInteger(input.buses) || input.buses < 1 || input.buses > 10) return 'Die Zahl der Busse muss zwischen 1 und 10 liegen.';
       if (Number.isNaN(Date.parse(input.departure))) return 'Bitte eine gültige Abfahrtszeit angeben.';
       if (id === null) {
@@ -154,6 +155,21 @@ export class LocalStorageService implements DataService {
       if (!booking || !trip) return 'Buchung nicht gefunden.';
       if (bus !== null && (bus < 1 || bus > trip.buses)) return 'Diesen Bus gibt es bei der Fahrt nicht.';
       return { ...s, bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, bus: bus ?? undefined } : b)) };
+    });
+
+  setBookingPaid: DataService['setBookingPaid'] = (bookingId, paid) =>
+    this.mutate((s) =>
+      s.bookings.some((b) => b.id === bookingId)
+        ? { ...s, bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, paid } : b)) }
+        : 'Buchung nicht gefunden.',
+    );
+
+  setBookingAttendance: DataService['setBookingAttendance'] = (bookingId, attended) =>
+    this.mutate((s) => {
+      const booking = s.bookings.find((b) => b.id === bookingId);
+      if (!booking) return 'Buchung nicht gefunden.';
+      if (booking.status !== 'confirmed') return 'Nur bestätigte Buchungen können abgehakt werden.';
+      return { ...s, bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, attended: attended ?? undefined } : b)) };
     });
 
   cancel: DataService['cancel'] = (tripId, userId) =>

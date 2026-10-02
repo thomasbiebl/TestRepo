@@ -259,6 +259,62 @@ describe('companions, stops and buses', () => {
   });
 });
 
+describe('payment, attendance and points', () => {
+  const confirmedTrip = async (seats = 3) => {
+    const trip = await addTrip(seats, 0);
+    await endInterest(trip);
+    await as('anna', `select book_trip($1)`, [trip]);
+    const id = (await db.query<{ id: string }>(`select id from bookings where trip_id = $1 and user_id = $2`, [trip, ids.anna])).rows[0]!.id;
+    return { trip, booking: id };
+  };
+
+  it('lets only admins mark bookings as paid or boarded', async () => {
+    const { booking } = await confirmedTrip();
+    expect(await asErr('anna', `select admin_set_booking_paid($1, true)`, [booking])).toMatch(/Admins/);
+    expect(await asErr('anna', `select admin_set_booking_attended($1, true)`, [booking])).toMatch(/Admins/);
+    await as('admin', `select admin_set_booking_paid($1, true)`, [booking]);
+    await as('admin', `select admin_set_booking_attended($1, false)`, [booking]);
+    expect((await db.query(`select paid, attended from bookings where id = $1`, [booking])).rows[0]).toEqual({ paid: true, attended: false });
+    await as('admin', `select admin_set_booking_attended($1, null)`, [booking]);
+    expect((await db.query(`select attended from bookings where id = $1`, [booking])).rows[0]).toEqual({ attended: null });
+  });
+
+  it('does not let attendance be set on a booking that is not confirmed', async () => {
+    const trip = await addTrip(2);
+    await as('anna', `select book_trip($1)`, [trip]);
+    const id = (await db.query<{ id: string }>(`select id from bookings where trip_id = $1`, [trip])).rows[0]!.id;
+    expect(await asErr('admin', `select admin_set_booking_attended($1, true)`, [id])).toMatch(/bestätigte/);
+  });
+
+  it('scores trip points, drops no-shows and applies the penalty', async () => {
+    const { trip, booking } = await confirmedTrip();
+    await db.query(`update trips set departure = now() - interval '1 day', points = 3 where id = $1`, [trip]);
+    expect((await db.query(`select user_score($1) as s, past_trips($1) as p`, [ids.anna])).rows[0]).toEqual({ s: 5 + 3, p: 6 });
+    await as('admin', `select admin_set_booking_attended($1, false)`, [booking]);
+    await as('admin', `update settings set no_show_penalty = 2`);
+    expect((await db.query(`select user_score($1) as s, past_trips($1) as p`, [ids.anna])).rows[0]).toEqual({ s: 3, p: 5 });
+    await db.query(`update trips set cancelled_at = now() where id = $1`, [trip]);
+    expect((await db.query(`select user_score($1) as s`, [ids.anna])).rows[0]).toEqual({ s: 5 });
+  });
+
+  it('ranks by score at allocation', async () => {
+    const old = await addTrip(5, 0);
+    await endInterest(old);
+    await as('max', `select book_trip($1)`, [old]);
+    await db.query(`update trips set departure = now() - interval '1 day' where id = $1`, [old]);
+    const oldBooking = (await db.query<{ id: string }>(`select id from bookings where trip_id = $1`, [old])).rows[0]!.id;
+    await as('admin', `select admin_set_booking_attended($1, false)`, [oldBooking]);
+    await as('admin', `update settings set no_show_penalty = 5`);
+    // max (9 base, no-show -5 = 4) now ranks below anna (5)
+    const trip = await addTrip(1);
+    await as('max', `select book_trip($1)`, [trip]);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await endInterest(trip);
+    await as('anna', `select allocate_due_trips()`);
+    expect(await statuses(trip)).toEqual({ anna: 'confirmed', max: 'waitlist' });
+  });
+});
+
 describe('own profile', () => {
   it('lets users change their own name, and nothing else', async () => {
     await as('anna', `select update_my_name('Anna Neu')`);

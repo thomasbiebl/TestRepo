@@ -12,13 +12,30 @@ export function getTripPhase(trip: Trip, now: number): TripPhase {
   return 'open';
 }
 
-/** Trips a user has taken: start value plus confirmed seats on trips already departed. */
+/** Trips on which a confirmed seat counts as taken: departed, not cancelled, not marked as no-show. */
+function countedBookings(user: User, trips: Trip[], bookings: Booking[], now: number) {
+  const departed = new Map(trips.filter((t) => Date.parse(t.departure) <= now && !t.cancelledAt).map((t) => [t.id, t]));
+  return bookings.flatMap((b) => {
+    const trip = departed.get(b.tripId);
+    return b.userId === user.id && b.status === 'confirmed' && trip ? [{ b, trip }] : [];
+  });
+}
+
+/** Trips a user has taken: start value plus confirmed seats on departed trips, no-shows excluded. */
 export function pastTripCount(user: User, trips: Trip[], bookings: Booking[], now: number): number {
-  const departed = new Set(trips.filter((t) => Date.parse(t.departure) <= now).map((t) => t.id));
-  const taken = bookings.filter(
-    (b) => b.userId === user.id && b.status === 'confirmed' && departed.has(b.tripId),
-  ).length;
-  return user.baseTrips + taken;
+  return user.baseTrips + countedBookings(user, trips, bookings, now).filter(({ b }) => b.attended !== false).length;
+}
+
+export function noShowCount(user: User, trips: Trip[], bookings: Booking[], now: number): number {
+  return countedBookings(user, trips, bookings, now).filter(({ b }) => b.attended === false).length;
+}
+
+/** Points for the allocation ranking: start value plus trip points, minus the no-show penalty. */
+export function userScore(user: User, trips: Trip[], bookings: Booking[], now: number, settings: Settings): number {
+  const counted = countedBookings(user, trips, bookings, now);
+  const earned = counted.filter(({ b }) => b.attended !== false).reduce((sum, { trip }) => sum + trip.points, 0);
+  const noShows = counted.filter(({ b }) => b.attended === false).length;
+  return Math.max(0, user.baseTrips + earned - noShows * settings.noShowPenalty);
 }
 
 export const byTrip = (bookings: Booking[], tripId: string) => bookings.filter((b) => b.tripId === tripId);
@@ -32,16 +49,16 @@ export const confirmedCount = (bookings: Booking[], tripId: string) =>
 
 export const freeSeats = (trip: Trip, bookings: Booking[]) => Math.max(0, trip.seats - confirmedCount(bookings, trip.id));
 
-/** Interested members of a trip, best claim first: most past trips, then earliest interest. */
-export function rankInterested(trip: Trip, snap: Snapshot, now: number): { booking: Booking; user: User; trips: number }[] {
+/** Interested members of a trip, best claim first: highest score, then earliest interest. */
+export function rankInterested(trip: Trip, snap: Snapshot, now: number): { booking: Booking; user: User; score: number }[] {
   const users = new Map(snap.users.map((u) => [u.id, u]));
   return byTrip(snap.bookings, trip.id)
     .filter((b) => b.status === 'interested')
     .flatMap((booking) => {
       const user = users.get(booking.userId);
-      return user ? [{ booking, user, trips: pastTripCount(user, snap.trips, snap.bookings, now) }] : [];
+      return user ? [{ booking, user, score: userScore(user, snap.trips, snap.bookings, now, snap.settings) }] : [];
     })
-    .sort((a, b) => b.trips - a.trips || a.booking.createdAt.localeCompare(b.booking.createdAt));
+    .sort((a, b) => b.score - a.score || a.booking.createdAt.localeCompare(b.booking.createdAt));
 }
 
 /** Which of the ranked bookings get a seat: groups that no longer fit are skipped, later ones may still fit. */
@@ -137,7 +154,7 @@ export function createBooking(
       return { ok: false, error: 'Die Fahrt ist bereits abgefahren.' };
     case 'interest':
       if (!user.isMember) return { ok: false, error: 'Nur Mitglieder können jetzt Interesse bekunden.' };
-      return { ok: true, booking: { id, tripId: trip.id, userId: user.id, status: 'interested', createdAt: nowIso, ...extra } };
+      return { ok: true, booking: { id, tripId: trip.id, userId: user.id, status: 'interested', createdAt: nowIso, paid: false, ...extra } };
     case 'open': {
       if (!user.isMember && !snap.settings.guestsMayBook) {
         return { ok: false, error: 'Die Buchung ist zurzeit nur für Mitglieder möglich.' };
@@ -153,6 +170,7 @@ export function createBooking(
           status: full ? 'waitlist' : 'confirmed',
           createdAt: nowIso,
           queuedAt: full ? nowIso : undefined,
+          paid: false,
           ...extra,
         },
       };
@@ -172,6 +190,9 @@ export function validateSettings(s: Settings): string | null {
     return 'Der Vorlauf für Mitglieder muss zwischen 0 und 30 Tagen liegen.';
   }
   if (!Number.isInteger(s.defaultSeats) || s.defaultSeats < 1) return 'Mindestens ein Platz als Standard.';
+  if (!Number.isInteger(s.noShowPenalty) || s.noShowPenalty < 0 || s.noShowPenalty > 10) {
+    return 'Der Abzug bei Nichterscheinen muss zwischen 0 und 10 Punkten liegen.';
+  }
   if (!Number.isInteger(s.maxCompanions) || s.maxCompanions < 0 || s.maxCompanions > 10) {
     return 'Begleitpersonen: zwischen 0 und 10 pro Buchung.';
   }
@@ -193,4 +214,15 @@ export function cancelBlockedReason(booking: Booking, trip: Trip, settings: Sett
   const deadline = Date.parse(trip.departure) - settings.cancelDeadlineHours * 3_600_000;
   if (now < deadline) return null;
   return `Stornieren ist nur bis ${settings.cancelDeadlineHours} Stunden vor der Abfahrt möglich. Bitte melde dich beim Admin.`;
+}
+
+/** What a booking costs: the price per person for every seat it takes. */
+export const amountDue = (b: Booking, trip: Trip) => trip.price * seatsOf(b);
+
+/** Money overview of a trip, counting confirmed bookings only. */
+export function tripTotals(trip: Trip, bookings: Booking[]) {
+  const confirmed = byTrip(bookings, trip.id).filter((b) => b.status === 'confirmed');
+  const expected = confirmed.reduce((sum, b) => sum + amountDue(b, trip), 0);
+  const paid = confirmed.filter((b) => b.paid).reduce((sum, b) => sum + amountDue(b, trip), 0);
+  return { people: confirmed.reduce((sum, b) => sum + seatsOf(b), 0), expected, paid, open: expected - paid };
 }
