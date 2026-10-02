@@ -1,5 +1,5 @@
-import type { Snapshot, Trip } from '../domain/types';
-import { allocateAll, allocateTrip, createBooking, interestEndFor, promoteWaitlist, getTripPhase } from '../domain/rules';
+import { DEFAULT_SETTINGS, type Snapshot, type Trip } from '../domain/types';
+import { allocateAll, allocateTrip, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
 
@@ -7,6 +7,17 @@ const KEY = 'fanclub.data.v1';
 const ok: Result = { ok: true };
 const fail = (error: string): Result => ({ ok: false, error });
 const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+/** Fills fields that older stored data does not have yet. */
+function migrate(raw: Partial<Snapshot>): Snapshot {
+  return {
+    users: raw.users ?? [],
+    trips: raw.trips ?? [],
+    bookings: raw.bookings ?? [],
+    news: raw.news ?? [],
+    settings: { ...DEFAULT_SETTINGS, ...raw.settings },
+  };
+}
 
 /** Keeps all data in this browser. Good for trying the app out, not for sharing between devices. */
 export class LocalStorageService implements DataService {
@@ -16,7 +27,7 @@ export class LocalStorageService implements DataService {
     if (this.cache) return this.cache;
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) return (this.cache = JSON.parse(raw) as Snapshot);
+      if (raw) return this.write(migrate(JSON.parse(raw) as Partial<Snapshot>));
     } catch {
       /* corrupt or blocked storage: start over with demo data */
     }
@@ -75,7 +86,7 @@ export class LocalStorageService implements DataService {
       if (Number.isNaN(Date.parse(input.departure))) return 'Bitte eine gültige Abfahrtszeit angeben.';
       if (id === null) {
         const createdAt = new Date(now).toISOString();
-        const trip: Trip = { id: uid(), ...input, createdAt, interestEndsAt: interestEndFor(createdAt) };
+        const trip: Trip = { id: uid(), ...input, createdAt, interestEndsAt: interestEndFor(createdAt, s.settings.interestDays) };
         return { ...s, trips: [trip, ...s.trips] };
       }
       const existing = s.trips.find((t) => t.id === id);
@@ -114,6 +125,27 @@ export class LocalStorageService implements DataService {
       if (getTripPhase(trip, now) === 'closed') return 'Die Fahrt ist bereits abgefahren.';
       const rest = s.bookings.filter((b) => b.id !== mine.id);
       return { ...s, bookings: promoteWaitlist(rest, trip) };
+    });
+
+  saveNews: DataService['saveNews'] = (id, input, authorId) =>
+    this.mutate((s, now) => {
+      const title = input.title.trim();
+      const body = input.body.trim();
+      if (!title || !body) return 'Bitte Titel und Text angeben.';
+      const stamp = new Date(now).toISOString();
+      if (id === null) {
+        return { ...s, news: [{ id: uid(), title, body, pinned: input.pinned, authorId, createdAt: stamp }, ...s.news] };
+      }
+      if (!s.news.some((n) => n.id === id)) return 'News nicht gefunden.';
+      return { ...s, news: s.news.map((n) => (n.id === id ? { ...n, title, body, pinned: input.pinned, updatedAt: stamp } : n)) };
+    });
+
+  deleteNews: DataService['deleteNews'] = (id) => this.mutate((s) => ({ ...s, news: s.news.filter((n) => n.id !== id) }));
+
+  saveSettings: DataService['saveSettings'] = (settings) =>
+    this.mutate((s) => {
+      const clean = { ...settings, clubName: settings.clubName.trim(), defaultMeetingPoint: settings.defaultMeetingPoint.trim() };
+      return validateSettings(clean) ?? { ...s, settings: clean };
     });
 
   async resetDemo(): Promise<void> {

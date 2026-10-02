@@ -23,6 +23,8 @@ export function AdminHome() {
       <div className="stack">
         <Link className="btn" to="/admin/trips">Fahrten verwalten</Link>
         <Link className="btn ghost" to="/admin/users">Benutzer verwalten</Link>
+        <Link className="btn ghost" to="/admin/news">News verwalten</Link>
+        <Link className="btn ghost" to="/admin/settings">Einstellungen</Link>
       </div>
       <h2 className="sub">Testhilfen</h2>
       <p className="muted">Setzt alle Daten in diesem Browser auf die Demo-Daten zurück.</p>

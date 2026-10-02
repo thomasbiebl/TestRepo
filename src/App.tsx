@@ -1,10 +1,14 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { AdminHome } from './pages/AdminHome';
+import { AdminNews } from './pages/AdminNews';
+import { AdminSettings } from './pages/AdminSettings';
 import { AdminTrips } from './pages/AdminTrips';
 import { AdminUsers } from './pages/AdminUsers';
 import { Login, Register } from './pages/AuthPages';
 import { MyBookings } from './pages/MyBookings';
+import { News } from './pages/News';
 import { Profile } from './pages/Profile';
 import { TripDetail } from './pages/TripDetail';
 import { Trips } from './pages/Trips';
@@ -23,7 +27,11 @@ function RequireAdmin() {
 }
 
 export function App() {
-  const { toast } = useApp();
+  const { toast, snap } = useApp();
+  const clubName = snap?.settings.clubName;
+  useEffect(() => {
+    document.title = clubName ? `${clubName} Busfahrten` : 'Busfahrten';
+  }, [clubName]);
   return (
     <>
       <Routes>
@@ -32,12 +40,15 @@ export function App() {
         <Route element={<RequireUser />}>
           <Route index element={<Trips />} />
           <Route path="trip/:id" element={<TripDetail />} />
+          <Route path="news" element={<News />} />
           <Route path="bookings" element={<MyBookings />} />
           <Route path="profile" element={<Profile />} />
           <Route element={<RequireAdmin />}>
             <Route path="admin" element={<AdminHome />} />
             <Route path="admin/trips" element={<AdminTrips />} />
             <Route path="admin/users" element={<AdminUsers />} />
+            <Route path="admin/news" element={<AdminNews />} />
+            <Route path="admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

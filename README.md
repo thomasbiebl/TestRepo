@@ -6,9 +6,9 @@ Aktueller Stand: **Phase 1 ohne Datenbank.** Alle Daten liegen im Browser (local
 
 ## Ablauf einer Fahrt
 
-1. Ein Admin erstellt die Fahrt. **3 Tage lang** dürfen nur Mitglieder Interesse bekunden.
+1. Ein Admin erstellt die Fahrt. Der **Vorlauf für Mitglieder** (Standard 3 Tage, einstellbar) gilt: so lange dürfen nur Mitglieder Interesse bekunden.
 2. Danach werden die Plätze **automatisch** vergeben: wer die meisten bisherigen Fahrten hat, kommt zuerst dran (bei Gleichstand zählt das frühere Interesse). Wer keinen Platz bekommt, steht auf der Warteliste.
-3. Sind Plätze frei, kann **jeder** angemeldete Benutzer buchen, auch Nicht-Mitglieder. Ist der Bus voll, geht es auf die Warteliste. Bei einer Stornierung rückt die Warteliste automatisch nach.
+3. Sind Plätze frei, kann **jeder** angemeldete Benutzer buchen, auch Nicht-Mitglieder (abschaltbar). Ist der Bus voll, geht es auf die Warteliste (abschaltbar). Bei einer Stornierung rückt die Warteliste automatisch nach.
 
 Als „bisherige Fahrten“ zählen bestätigte Plätze auf abgefahrenen Fahrten plus ein vom Admin gesetzter Startwert für Fahrten vor der App.
 
@@ -18,6 +18,8 @@ Als „bisherige Fahrten“ zählen bestätigte Plätze auf abgefahrenen Fahrten
 - Mitgliederverwaltung: Registrierte können eine Mitgliedschaft anfragen, Admins bestätigen
 - Fahrten ansehen, Interesse bekunden, buchen, stornieren, Wartelistenplatz sehen
 - Admin-Bereich: Fahrten anlegen, bearbeiten, löschen, Teilnehmer ansehen, Benutzer verwalten
+- News: Admins veröffentlichen Neuigkeiten (auch angepinnt), ein roter Punkt am Tab zeigt ungelesene News
+- Einstellungen (Admin): Vorlauf für Mitglieder in Tagen, Gäste dürfen buchen ja/nein, Warteliste ja/nein, Vorgaben für neue Fahrten (Plätze, Preis, Treffpunkt), Vereinsname. Der Vorlauf gilt für neu angelegte Fahrten, bestehende behalten ihre Frist.
 - Wechselbare Designs (Profil → Design): „Stadion-Nacht“ und „Klassisch“
 - Installierbar als PWA („Zum Startbildschirm hinzufügen“), läuft offline
 

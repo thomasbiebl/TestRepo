@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  allocateTrip, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, waitlistOf,
+  allocateTrip, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
 } from '../src/domain/rules';
-import type { Booking, Snapshot, Trip, User } from '../src/domain/types';
+import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
 const DAY = 86_400_000;
 const T0 = Date.parse('2026-11-01T10:00:00Z');
@@ -19,7 +19,9 @@ const trip = (o: Partial<Trip> = {}): Trip => ({
 const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1'): Booking => ({
   id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at),
 });
-const snap = (users: User[], trips: Trip[], bookings: Booking[]): Snapshot => ({ users, trips, bookings });
+const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
+  users, trips, bookings, news: [], settings: { ...DEFAULT_SETTINGS, ...settings },
+});
 
 describe('phases', () => {
   it('switches after 3 days and closes at departure', () => {
@@ -95,5 +97,37 @@ describe('waiting list', () => {
     const out = promoteWaitlist(bookings, t);
     expect(out.find((b) => b.userId === 'w1')?.status).toBe('confirmed');
     expect(waitlistOf(out, 't1').map((b) => b.userId)).toEqual(['w2']);
+  });
+});
+
+describe('settings', () => {
+  it('uses the configured lead time for the interest end', () => {
+    expect(interestEndFor(iso(T0), 1)).toBe(iso(T0 + DAY));
+    expect(interestEndFor(iso(T0), 0)).toBe(iso(T0));
+    expect(interestEndFor(iso(T0))).toBe(iso(T0 + 3 * DAY));
+  });
+
+  it('blocks guests after the allocation when guestsMayBook is off', () => {
+    const guest = user('g', { isMember: false });
+    const member = user('m');
+    const s = snap([guest, member], [trip()], [], { guestsMayBook: false });
+    const now = T0 + 4 * DAY;
+    expect(createBooking(s, s.trips[0]!, guest, now, 'x').ok).toBe(false);
+    expect(createBooking(s, s.trips[0]!, member, now, 'x').ok).toBe(true);
+  });
+
+  it('refuses bookings on a full trip when the waiting list is off', () => {
+    const member = user('m');
+    const s = snap([member], [trip()], [booking('a', 'confirmed'), booking('b', 'confirmed')], { waitlistEnabled: false });
+    expect(createBooking(s, s.trips[0]!, member, T0 + 4 * DAY, 'x').ok).toBe(false);
+  });
+
+  it('validates settings', () => {
+    expect(validateSettings(DEFAULT_SETTINGS)).toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, interestDays: -1 })).not.toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, interestDays: 1.5 })).not.toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, interestDays: 31 })).not.toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, defaultSeats: 0 })).not.toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, clubName: '  ' })).not.toBeNull();
   });
 });

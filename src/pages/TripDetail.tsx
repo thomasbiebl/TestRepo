@@ -18,6 +18,9 @@ export function TripDetail() {
   const ranked = rankInterested(trip, snap, now);
   const myRank = ranked.findIndex((r) => r.booking.userId === user.id) + 1;
   const myTrips = pastTripCount(user, snap.trips, snap.bookings, now);
+  const { guestsMayBook, waitlistEnabled } = snap.settings;
+  const mayTry = phase === 'open' ? user.isMember || guestsMayBook : user.isMember;
+  const soldOut = phase === 'open' && free === 0 && !waitlistEnabled;
   const waitPos = mine?.status === 'waitlist' ? waitlist.findIndex((b) => b.id === mine.id) + 1 : 0;
 
   const book = () => act(() => data.book(trip.id, user.id), phase === 'interest' ? 'Interesse bekundet.' : undefined);
@@ -95,7 +98,12 @@ export function TripDetail() {
           </p>
         )}
 
-        {phase !== 'closed' && !mine && (phase === 'open' || user.isMember) && (
+        {phase === 'open' && !mine && !mayTry && (
+          <p className="notice">Die Buchung ist zurzeit nur für Mitglieder möglich.</p>
+        )}
+        {soldOut && !mine && <p className="notice">Diese Fahrt ist ausgebucht.</p>}
+
+        {phase !== 'closed' && !mine && mayTry && !soldOut && (
           <button className="btn" onClick={book}>{mainLabel}</button>
         )}
         {phase !== 'closed' && mine && (

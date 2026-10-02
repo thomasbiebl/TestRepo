@@ -3,6 +3,7 @@ import { Badge, PhaseBadge, SeatBar, StatusBadge, fmtDate, fmtPrice } from '../c
 import { confirmedCount, freeSeats, getTripPhase, waitlistOf, byTrip } from '../domain/rules';
 import type { Trip } from '../domain/types';
 import { useApp } from '../state/AppContext';
+import { fmtDay, sortNews } from './News';
 
 function TripCard({ trip }: { trip: Trip }) {
   const { snap, user, now } = useApp();
@@ -45,10 +46,17 @@ export function Trips() {
   const { snap, now } = useApp();
   if (!snap) return null;
   const upcoming = snap.trips.filter((t) => getTripPhase(t, now) !== 'closed').sort((a, b) => a.departure.localeCompare(b.departure));
+  const latestNews = sortNews(snap.news)[0];
   const past = snap.trips.filter((t) => getTripPhase(t, now) === 'closed').sort((a, b) => b.departure.localeCompare(a.departure));
   return (
     <>
       <h1 className="title">Bus<span className="accent-text">fahrten</span></h1>
+      {latestNews && (
+        <Link to="/news" className="card news-teaser">
+          <span className="muted">News · {fmtDay(latestNews.createdAt)}</span>
+          <h3>{latestNews.title}</h3>
+        </Link>
+      )}
       {upcoming.length === 0 && <p className="muted">Zurzeit sind keine Fahrten geplant.</p>}
       <div className="stack">
         {upcoming.map((t) => <TripCard key={t.id} trip={t} />)}

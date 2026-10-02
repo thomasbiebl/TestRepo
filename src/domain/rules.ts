@@ -1,10 +1,9 @@
-import type { Booking, Snapshot, Trip, TripPhase, User } from './types';
+import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type TripPhase, type User } from './types';
 
-export const INTEREST_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const interestEndFor = (createdAt: string): string =>
-  new Date(Date.parse(createdAt) + INTEREST_DAYS * DAY_MS).toISOString();
+export const interestEndFor = (createdAt: string, days: number = DEFAULT_SETTINGS.interestDays): string =>
+  new Date(Date.parse(createdAt) + days * DAY_MS).toISOString();
 
 export function getTripPhase(trip: Trip, now: number): TripPhase {
   if (now >= Date.parse(trip.departure)) return 'closed';
@@ -104,7 +103,11 @@ export function createBooking(
       if (!user.isMember) return { ok: false, error: 'Nur Mitglieder können jetzt Interesse bekunden.' };
       return { ok: true, booking: { id, tripId: trip.id, userId: user.id, status: 'interested', createdAt: nowIso } };
     case 'open': {
+      if (!user.isMember && !snap.settings.guestsMayBook) {
+        return { ok: false, error: 'Die Buchung ist zurzeit nur für Mitglieder möglich.' };
+      }
       const full = freeSeats(trip, snap.bookings) === 0;
+      if (full && !snap.settings.waitlistEnabled) return { ok: false, error: 'Die Fahrt ist leider ausgebucht.' };
       return {
         ok: true,
         booking: {
@@ -123,4 +126,16 @@ export function createBooking(
 export function formatCountdown(ms: number): { days: number; hours: number; minutes: number } {
   const total = Math.max(0, Math.floor(ms / 60000));
   return { days: Math.floor(total / 1440), hours: Math.floor((total % 1440) / 60), minutes: total % 60 };
+}
+
+/** Returns an error message for invalid settings, or null when they are fine. */
+export function validateSettings(s: Settings): string | null {
+  if (!s.clubName.trim()) return 'Bitte einen Vereinsnamen angeben.';
+  if (!Number.isInteger(s.interestDays) || s.interestDays < 0 || s.interestDays > 30) {
+    return 'Der Vorlauf für Mitglieder muss zwischen 0 und 30 Tagen liegen.';
+  }
+  if (!Number.isInteger(s.defaultSeats) || s.defaultSeats < 1) return 'Mindestens ein Platz als Standard.';
+  if (!(s.defaultPrice >= 0)) return 'Der Standardpreis darf nicht negativ sein.';
+  if (!s.defaultMeetingPoint.trim()) return 'Bitte einen Standard-Treffpunkt angeben.';
+  return null;
 }

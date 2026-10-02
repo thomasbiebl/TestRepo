@@ -1,4 +1,4 @@
-import type { Booking, Snapshot, Trip, User } from '../domain/types';
+import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Snapshot, type Trip, type User } from '../domain/types';
 import { interestEndFor } from '../domain/rules';
 
 const DAY = 86_400_000;
@@ -68,5 +68,17 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
     b('dortmund', 'sophie', 'confirmed', 5 * DAY),
     b('dortmund', 'lukas', 'waitlist', 2 * DAY),
   ];
-  return { users, trips, bookings };
+  const news: NewsPost[] = [
+    {
+      id: 'news-welcome', authorId: 'admin', pinned: true, createdAt: iso(now - 6 * DAY),
+      title: 'Willkommen in der Fanclub-App',
+      body: 'Hier findet ihr alle Busfahrten. Mitglieder können nach Erstellung einer Fahrt zuerst Interesse bekunden, danach werden die Plätze nach bisherigen Fahrten vergeben. Übrige Plätze sind für alle buchbar.',
+    },
+    {
+      id: 'news-augsburg', authorId: 'admin', pinned: false, createdAt: iso(now - 2 * HOUR),
+      title: 'Neue Fahrt: Augsburg',
+      body: 'Die Fahrt nach Augsburg ist online. Mitglieder können jetzt Interesse bekunden.\nAbfahrt am Parkplatz Stadion.',
+    },
+  ];
+  return { users, trips, bookings, news, settings: { ...DEFAULT_SETTINGS } };
 }

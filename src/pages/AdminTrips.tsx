@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PhaseBadge, StatusBadge, fmtDate } from '../components/ui';
 import type { TripInput } from '../data/DataService';
 import { byTrip, getTripPhase, pastTripCount } from '../domain/rules';
-import type { Trip } from '../domain/types';
+import type { Settings, Trip } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -14,10 +14,10 @@ const toLocalInput = (iso: string) => {
 
 interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string }
 
-const emptyForm = (): FormState => {
+const emptyForm = (s: Settings): FormState => {
   const d = new Date(Date.now() + 14 * 86_400_000);
   d.setHours(8, 0, 0, 0);
-  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: 'Parkplatz Stadion', price: '30', seats: '50' };
+  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats) };
 };
 
 function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmit: (i: TripInput) => void; onCancel: () => void }) {
@@ -65,7 +65,7 @@ export function AdminTrips() {
   if (!snap) return null;
 
   const save = async (id: string | null, input: TripInput) => {
-    if (await act(() => data.saveTrip(id, input), id ? 'Fahrt gespeichert.' : 'Fahrt erstellt. Die Interessensphase für Mitglieder läuft 3 Tage.')) setEditing(null);
+    if (await act(() => data.saveTrip(id, input), id ? 'Fahrt gespeichert.' : `Fahrt erstellt. Mitglieder haben ${snap.settings.interestDays === 1 ? '1 Tag' : `${snap.settings.interestDays} Tage`} Vorlauf.`)) setEditing(null);
   };
 
   const trips = [...snap.trips].sort((a, b) => b.departure.localeCompare(a.departure));
@@ -76,7 +76,7 @@ export function AdminTrips() {
       <h1 className="title">Fahrten</h1>
       {editing ? (
         <TripForm
-          initial={editing === 'new' ? emptyForm() : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats) }}
+          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats) }}
           onSubmit={(i) => void save(editing === 'new' ? null : editing.id, i)}
           onCancel={() => setEditing(null)}
         />

@@ -4,10 +4,11 @@ import { ADMIN_EMAIL, ADMIN_PASSWORD, DEMO_PASSWORD } from '../data/seed';
 import { useApp } from '../state/AppContext';
 
 function AuthFrame({ title, children }: { title: string; children: React.ReactNode }) {
+  const { snap } = useApp();
   return (
     <div className="auth">
       <div className="auth-box">
-        <small className="eyebrow">Fanclub</small>
+        <small className="eyebrow">{snap?.settings.clubName ?? 'Fanclub'}</small>
         <h1 className="title">
           Bus<span className="accent-text">fahrten</span>
         </h1>

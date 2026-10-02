@@ -42,8 +42,44 @@ export interface Booking {
 
 export type TripPhase = 'interest' | 'open' | 'closed';
 
+export interface NewsPost {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt?: string;
+  authorId: string;
+  /** Pinned posts are shown first. */
+  pinned: boolean;
+}
+
+/** Club-wide settings, editable by admins. */
+export interface Settings {
+  clubName: string;
+  /** Days after trip creation in which only members can show interest. Applies to new trips. */
+  interestDays: number;
+  /** After the seats are handed out, may non-members book free seats too? */
+  guestsMayBook: boolean;
+  waitlistEnabled: boolean;
+  defaultSeats: number;
+  defaultPrice: number;
+  defaultMeetingPoint: string;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  clubName: 'Fanclub',
+  interestDays: 3,
+  guestsMayBook: true,
+  waitlistEnabled: true,
+  defaultSeats: 50,
+  defaultPrice: 30,
+  defaultMeetingPoint: 'Parkplatz Stadion',
+};
+
 export interface Snapshot {
   users: User[];
   trips: Trip[];
   bookings: Booking[];
+  news: NewsPost[];
+  settings: Settings;
 }

@@ -1,6 +1,8 @@
-import type { Snapshot, Trip, User } from '../domain/types';
+import type { NewsPost, Settings, Snapshot, Trip, User } from '../domain/types';
 
 export type Result = { ok: true } | { ok: false; error: string };
+
+export type NewsInput = Pick<NewsPost, 'title' | 'body' | 'pinned'>;
 
 export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats'>;
 
@@ -25,6 +27,11 @@ export interface DataService {
   /** Interest (members, phase 1) or booking (phase 2). */
   book(tripId: string, userId: string): Promise<Result>;
   cancel(tripId: string, userId: string): Promise<Result>;
+
+  saveNews(id: string | null, input: NewsInput, authorId: string): Promise<Result>;
+  deleteNews(id: string): Promise<Result>;
+
+  saveSettings(settings: Settings): Promise<Result>;
 
   resetDemo(): Promise<void>;
 }
