@@ -1,0 +1,33 @@
+:root,
+:root[data-theme='nacht'] {
+  color-scheme: dark;
+  --bg: #0b1d3a;
+  --surface: #13294d;
+  --surface-2: #0a1830;
+  --border: #1f3a68;
+  --fg: #eaf0fa;
+  --muted: #8fa3c4;
+  --primary: #dc052d;
+  --primary-hover: #f0213f;
+  --on-primary: #ffffff;
+  --accent: #3da0ff;
+  --accent-strong: #0066b2;
+  --ok: #2bc27a;
+  --warn: #f2b134;
+  --focus: #3da0ff;
+  --header-bg: transparent;
+  --header-fg: #eaf0fa;
+  --header-muted: #8fa3c4;
+  --tabbar-bg: #071326;
+  --tab-active-bg: #dc052d;
+  --tab-active-fg: #ffffff;
+  --badge-bg: #3a5079;
+  --bar-track: #0a1830;
+  --bar-fill: linear-gradient(90deg, #0066b2, #3da0ff);
+  --bar-fill-full: linear-gradient(90deg, #dc052d, #ff4d6a);
+  --highlight-border: #dc052d;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: none;
+  --title-weight: 800;
+}
