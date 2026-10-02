@@ -10,6 +10,10 @@ export interface User {
   /** Trips taken before the app existed (set by admins). */
   baseTrips: number;
   createdAt: string;
+  /** E-mail for personal messages: seat confirmed, moved up, trip cancelled. */
+  emailPersonal: boolean;
+  /** E-mail for messages to everyone: new trip, news. */
+  emailBroadcast: boolean;
 }
 
 export interface Trip {
@@ -71,6 +75,19 @@ export interface BookOptions {
   stop?: string;
 }
 
+export type NotificationType = 'allocated' | 'waitlisted' | 'promoted' | 'trip_cancelled' | 'new_trip' | 'news';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  tripId?: string;
+  createdAt: string;
+  readAt?: string;
+}
+
 export type TripPhase = 'interest' | 'open' | 'closed' | 'cancelled';
 
 export interface NewsPost {
@@ -122,4 +139,6 @@ export interface Snapshot {
   bookings: Booking[];
   news: NewsPost[];
   settings: Settings;
+  /** Messages of the logged-in user (the demo keeps everyone's). */
+  notifications: Notification[];
 }

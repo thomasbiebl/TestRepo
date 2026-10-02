@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../state/AppContext';
 import { useNewsSeen } from '../state/newsSeen';
 
@@ -16,6 +16,7 @@ export function Layout() {
     { to: '/profile', label: 'Profil', icon: '👤' },
     ...(user?.isAdmin ? [{ to: '/admin', label: 'Admin', icon: '⚙️' }] : []),
   ];
+  const unread = snap?.notifications.filter((n) => n.userId === user?.id && !n.readAt).length ?? 0;
   const deep = pathname.startsWith('/trip/') || pathname.startsWith('/admin/');
 
   return (
@@ -27,6 +28,10 @@ export function Layout() {
           ) : (
             <small>{user ? `Servus ${user.name.split(' ')[0]}${user.isMember ? ' · Mitglied' : ''}` : ''}</small>
           )}
+          <Link to="/notifications" className="bell" aria-label={unread > 0 ? `Mitteilungen, ${unread} neu` : 'Mitteilungen'}>
+            <span aria-hidden="true">🔔</span>
+            {unread > 0 && <i className="count">{unread > 9 ? '9+' : unread}</i>}
+          </Link>
         </div>
       </header>
       <main className="page">

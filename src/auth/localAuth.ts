@@ -57,6 +57,7 @@ export class LocalAuth implements AuthService {
       id: crypto.randomUUID?.() ?? `${Date.now()}`,
       email, name, passwordHash: await hashPassword(input.password), isMember: false, isAdmin: false,
       memberRequested: input.wantsMembership, baseTrips: 0, createdAt: new Date().toISOString(),
+      emailPersonal: true, emailBroadcast: false,
     };
     const stored = await this.data.addUser(user);
     if (!stored.ok) return { ok: false as const, error: stored.error };

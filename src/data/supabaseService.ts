@@ -1,18 +1,24 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
+import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Notification, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
 import { validateSettings } from '../domain/rules';
 import type { DataService, Result } from './DataService';
 
 // Row shapes as they come from Postgres.
-interface ProfileRow { id: string; email?: string; name: string; is_member: boolean; is_admin?: boolean; member_requested?: boolean; base_trips: number; created_at?: string }
+interface ProfileRow { id: string; email?: string; name: string; is_member: boolean; is_admin?: boolean; member_requested?: boolean; base_trips: number; created_at?: string; email_personal?: boolean; email_broadcast?: boolean }
 interface TripRow { id: string; title: string; departure: string; meeting_point: string; price: number | string; seats: number; created_at: string; interest_ends_at: string; allocated_at: string | null; kickoff: string | null; return_time: string | null; notes: string; cancelled_at: string | null; cancel_reason: string | null; stops: string[] | null; buses: number; points: number }
 interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null; companions: number; companion_names: string; stop: string | null; bus: number | null; paid: boolean; attended: boolean | null }
 interface NewsRow { id: string; title: string; body: string; author_id: string | null; pinned: boolean; created_at: string; updated_at: string | null }
+interface NotificationRow { id: string; user_id: string; type: Notification['type']; title: string; body: string; trip_id: string | null; created_at: string; read_at: string | null }
 interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number; max_companions: number; no_show_penalty: number }
 
 const toUser = (r: ProfileRow): User => ({
   id: r.id, email: r.email ?? '', name: r.name, passwordHash: '', isMember: r.is_member, isAdmin: r.is_admin ?? false,
   memberRequested: r.member_requested ?? false, baseTrips: r.base_trips, createdAt: r.created_at ?? '',
+  emailPersonal: r.email_personal ?? true, emailBroadcast: r.email_broadcast ?? false,
+});
+const toNotification = (r: NotificationRow): Notification => ({
+  id: r.id, userId: r.user_id, type: r.type, title: r.title, body: r.body, tripId: r.trip_id ?? undefined,
+  createdAt: r.created_at, readAt: r.read_at ?? undefined,
 });
 const toTrip = (r: TripRow): Trip => ({
   id: r.id, title: r.title, departure: r.departure, meetingPoint: r.meeting_point, price: Number(r.price), seats: r.seats,
@@ -49,19 +55,20 @@ export class SupabaseService implements DataService {
     const settingsRes = await this.sb.from('settings').select('*').eq('id', 1).maybeSingle();
     if (settingsRes.error) throw settingsRes.error;
     const settings = toSettings(settingsRes.data as SettingsRow | null);
-    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings };
+    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings, notifications: [] };
 
     // Hands out seats for trips whose member phase is over. Safe to call any time.
     await this.sb.rpc('allocate_due_trips');
 
-    const [names, profiles, trips, bookings, news] = await Promise.all([
+    const [names, profiles, trips, bookings, news, notifications] = await Promise.all([
       this.sb.from('public_profiles').select('id, name, base_trips, is_member'),
       this.sb.from('profiles').select('*'),
       this.sb.from('trips').select('*'),
       this.sb.from('bookings').select('*'),
       this.sb.from('news').select('*'),
+      this.sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
     ]);
-    for (const res of [names, profiles, trips, bookings, news]) if (res.error) throw res.error;
+    for (const res of [names, profiles, trips, bookings, news, notifications]) if (res.error) throw res.error;
 
     // Everyone sees names; admins see full profiles, others only their own.
     const users = new Map((names.data as ProfileRow[]).map((r) => [r.id, toUser(r)]));
@@ -73,6 +80,7 @@ export class SupabaseService implements DataService {
       bookings: (bookings.data as BookingRow[]).map(toBooking),
       news: (news.data as NewsRow[]).map(toNews),
       settings,
+      notifications: (notifications.data as NotificationRow[]).map(toNotification),
     };
   }
 
@@ -131,6 +139,11 @@ export class SupabaseService implements DataService {
     fail((await this.sb.rpc('admin_set_booking_bus', { p_booking: bookingId, p_bus: bus })).error);
 
   cancel: DataService['cancel'] = async (tripId) => fail((await this.sb.rpc('cancel_booking', { p_trip: tripId })).error);
+
+  markNotificationsRead: DataService['markNotificationsRead'] = async () => fail((await this.sb.rpc('mark_notifications_read')).error);
+
+  updateNotificationPrefs: DataService['updateNotificationPrefs'] = async (_userId, prefs) =>
+    fail((await this.sb.rpc('update_my_notification_prefs', { p_personal: prefs.emailPersonal, p_broadcast: prefs.emailBroadcast })).error);
 
   saveNews: DataService['saveNews'] = async (id, input) => {
     const title = input.title.trim();

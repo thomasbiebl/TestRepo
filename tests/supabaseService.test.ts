@@ -12,7 +12,7 @@ function fakeClient(tables: Record<string, unknown[]>, loggedIn = true) {
   const calls: string[] = [];
   const query = (table: string) => {
     const q: Record<string, unknown> = {
-      select: () => q, eq: () => q, insert: (r: unknown) => (calls.push(`insert ${table} ${JSON.stringify(r)}`), q),
+      select: () => q, eq: () => q, order: () => q, limit: () => q, insert: (r: unknown) => (calls.push(`insert ${table} ${JSON.stringify(r)}`), q),
       update: (r: unknown) => (calls.push(`update ${table} ${JSON.stringify(r)}`), q),
       delete: () => (calls.push(`delete ${table}`), q),
       maybeSingle: () => Promise.resolve({ data: tables[table]?.[0] ?? null, error: null }),
@@ -36,6 +36,7 @@ describe('SupabaseService', () => {
       profiles: [{ id: 'u1', email: 'anna@x.de', name: 'Anna', is_member: true, is_admin: true, member_requested: false, base_trips: 3, created_at: '2026-01-01T00:00:00Z' }],
       trips: [{ id: 't1', title: 'A', departure: '2026-12-01T08:00:00Z', meeting_point: 'P', price: '28.00', seats: 50, created_at: '2026-11-01T00:00:00Z', interest_ends_at: '2026-11-04T00:00:00Z', allocated_at: null, kickoff: null, return_time: null, notes: '', cancelled_at: null, cancel_reason: null, stops: null, buses: 1, points: 2 }],
       bookings: [{ id: 'b1', trip_id: 't1', user_id: 'u1', status: 'interested', created_at: '2026-11-02T00:00:00Z', queued_at: null, companions: 1, companion_names: 'Petra', stop: null, bus: null, paid: true, attended: false }],
+      notifications: [{ id: 'x1', user_id: 'u1', type: 'allocated', title: 'Platz bestätigt', body: 'b', trip_id: 't1', created_at: '2026-11-05T00:00:00Z', read_at: null }],
       news: [{ id: 'n1', title: 'Hi', body: 'Text', author_id: null, pinned: true, created_at: '2026-11-01T00:00:00Z', updated_at: null }],
     });
     const snap = await new SupabaseService(sb).load();
@@ -44,6 +45,7 @@ describe('SupabaseService', () => {
     expect(snap.trips[0]).toMatchObject({ meetingPoint: 'P', price: 28, allocatedAt: undefined });
     expect(snap.bookings[0]).toMatchObject({ tripId: 't1', userId: 'u1', status: 'interested', companions: 1, companionNames: 'Petra', paid: true, attended: false });
     expect(snap.trips[0]).toMatchObject({ points: 2 });
+    expect(snap.notifications[0]).toMatchObject({ userId: 'u1', type: 'allocated', tripId: 't1', readAt: undefined });
     expect(snap.news[0]).toMatchObject({ authorId: '', pinned: true });
     const anna = snap.users.find((u) => u.id === 'u1')!;
     const max = snap.users.find((u) => u.id === 'u2')!;
@@ -67,13 +69,15 @@ describe('SupabaseService', () => {
     await svc.endInterestNow('t1');
     await svc.deleteUser('u2');
     await svc.cancelTrip('t1', 'Schnee');
+    await svc.markNotificationsRead('u1');
+    await svc.updateNotificationPrefs('u1', { emailPersonal: true, emailBroadcast: false });
     await svc.setBookingBus('b1', 2);
     await svc.setBookingPaid('b1', true);
     await svc.setBookingAttendance('b1', null);
     await svc.updateMyName('u1', 'Neu');
     await svc.deleteMyAccount('u1');
     const rpcs = calls.filter((c) => c.startsWith('rpc ')).map((c) => /^rpc (\w+) (.*)$/.exec(c)!);
-    expect(rpcs.length).toBe(10);
+    expect(rpcs.length).toBe(12);
     for (const [, fn, args] of rpcs) {
       const decl = [...migration.matchAll(new RegExp(`create function public\\.${fn}\\(([^)]*)\\)`, 'g'))].at(-1);
       expect(decl, `function ${fn} exists in migration`).not.toBeNull();

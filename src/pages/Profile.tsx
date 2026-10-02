@@ -84,6 +84,23 @@ export function Profile() {
           <button className="btn ghost">Passwort speichern</button>
         </form>
 
+        {!auth.isDemo && (
+          <section className="card form">
+            <h3>E-Mail-Benachrichtigungen</h3>
+            <label className="check" htmlFor="mail-personal">
+              <input id="mail-personal" type="checkbox" checked={user.emailPersonal}
+                onChange={(e) => void act(() => data.updateNotificationPrefs(user.id, { emailPersonal: e.target.checked, emailBroadcast: user.emailBroadcast }), 'Gespeichert.')} />
+              Wenn mein Platz vergeben wird, ich nachrücke oder eine Fahrt abgesagt wird
+            </label>
+            <label className="check" htmlFor="mail-broadcast">
+              <input id="mail-broadcast" type="checkbox" checked={user.emailBroadcast}
+                onChange={(e) => void act(() => data.updateNotificationPrefs(user.id, { emailPersonal: user.emailPersonal, emailBroadcast: e.target.checked }), 'Gespeichert.')} />
+              Bei neuen Fahrten und News
+            </label>
+            <p className="muted">Mitteilungen in der App bekommst du immer.</p>
+          </section>
+        )}
+
         <section className="card">
           <h3>Design</h3>
           <div className="themes" role="radiogroup" aria-label="Design">

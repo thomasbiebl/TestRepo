@@ -38,6 +38,9 @@ export interface DataService {
   /** Admin: boarded (true), did not show up (false), or not recorded (null). */
   setBookingAttendance(bookingId: string, attended: boolean | null): Promise<Result>;
 
+  markNotificationsRead(userId: string): Promise<Result>;
+  updateNotificationPrefs(userId: string, prefs: { emailPersonal: boolean; emailBroadcast: boolean }): Promise<Result>;
+
   saveNews(id: string | null, input: NewsInput, authorId: string): Promise<Result>;
   deleteNews(id: string): Promise<Result>;
 

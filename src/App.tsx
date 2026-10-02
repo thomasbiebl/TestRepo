@@ -10,6 +10,7 @@ import { AdminUsers } from './pages/AdminUsers';
 import { ForgotPassword, Login, Register, ResetPassword } from './pages/AuthPages';
 import { MyBookings } from './pages/MyBookings';
 import { News } from './pages/News';
+import { Notifications } from './pages/Notifications';
 import { Profile } from './pages/Profile';
 import { TripDetail } from './pages/TripDetail';
 import { Trips } from './pages/Trips';
@@ -46,6 +47,7 @@ export function App() {
           <Route index element={<Trips />} />
           <Route path="trip/:id" element={<TripDetail />} />
           <Route path="news" element={<News />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="bookings" element={<MyBookings />} />
           <Route path="profile" element={<Profile />} />
           <Route element={<RequireAdmin />}>

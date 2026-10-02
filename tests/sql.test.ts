@@ -315,6 +315,45 @@ describe('payment, attendance and points', () => {
   });
 });
 
+describe('notifications', () => {
+  const mine = (key: string) => as<{ type: string; title: string }>(key, `select type, title from notifications order by created_at, type`);
+
+  it('tells people about the allocation and about moving up from the waiting list', async () => {
+    const trip = await addTrip(1);
+    await as('max', `select book_trip($1)`, [trip]);
+    await as('karl', `select book_trip($1)`, [trip]);
+    await endInterest(trip);
+    await as('max', `select allocate_due_trips()`);
+    expect((await mine('max')).map((n) => n.type)).toContain('allocated');
+    expect((await mine('karl')).map((n) => n.type)).toContain('waitlisted');
+    await as('max', `select cancel_booking($1)`, [trip]);
+    expect((await mine('karl')).map((n) => n.type)).toContain('promoted');
+  });
+
+  it('shows everybody a new trip, news to all but the author, and cancellations to booked people', async () => {
+    const trip = await addTrip(2);
+    expect((await mine('lukas')).map((n) => n.type)).toEqual(['new_trip']);
+    await as('admin', `insert into news (title, body) values ('Hallo', 'Welt')`);
+    expect((await mine('lukas')).map((n) => n.type).sort()).toEqual(['new_trip', 'news']);
+    expect((await mine('admin')).map((n) => n.type)).toEqual(['new_trip']);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await as('admin', `select admin_cancel_trip($1, 'Schnee')`, [trip]);
+    expect((await mine('anna')).find((n) => n.type === 'trip_cancelled')?.title).toMatch(/abgesagt/);
+    expect((await mine('lukas')).map((n) => n.type)).not.toContain('trip_cancelled');
+  });
+
+  it('only shows own notifications, lets users mark them read and set e-mail preferences', async () => {
+    await addTrip(2);
+    expect(await as('anna', `select id from notifications where user_id = $1`, [ids.max])).toEqual([]);
+    expect(await asErr('anna', `update notifications set title = 'x'`)).toMatch(/permission denied/);
+    await as('anna', `select mark_notifications_read()`);
+    expect(await as('anna', `select id from notifications where read_at is null`)).toEqual([]);
+    expect((await db.query(`select count(*)::int as n from notifications where user_id = $1 and read_at is null`, [ids.max])).rows[0]).toEqual({ n: 1 });
+    await as('anna', `select update_my_notification_prefs(false, true)`);
+    expect((await db.query(`select email_personal, email_broadcast from profiles where id = $1`, [ids.anna])).rows[0]).toEqual({ email_personal: false, email_broadcast: true });
+  });
+});
+
 describe('own profile', () => {
   it('lets users change their own name, and nothing else', async () => {
     await as('anna', `select update_my_name('Anna Neu')`);

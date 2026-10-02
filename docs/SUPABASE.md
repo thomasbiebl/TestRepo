@@ -58,6 +58,32 @@ Lokal: `.env.example` nach `.env.local` kopieren, Werte eintragen, `npm run dev`
 
 Das Repo ist öffentlich, darum ist die Verschlüsselung Pflicht. Die Datei steht unter *Actions → Datenbank-Backup → letzter Lauf → Artifacts*. Entschlüsseln: `gpg --decrypt backup-2026-11-01.tgz.gpg > backup.tgz`, dann `tar xzf backup.tgz`. Einspielen in ein neues Projekt: zuerst `0001_init.sql`, dann die Daten aus `public.sql` und `auth.sql`.
 
+## 7. E-Mail-Benachrichtigungen (optional)
+
+Mitteilungen in der App (Glocke oben rechts) funktionieren ohne weitere Einrichtung. Für zusätzliche E-Mails gibt es die Edge Function `supabase/functions/notify-email`. Sie verschickt zu jeder neuen Mitteilung eine Mail, aber nur wenn die Person es in ihrem Profil erlaubt hat:
+
+- **Persönliche Meldungen** (Platz vergeben, nachgerückt, Fahrt abgesagt): standardmäßig an.
+- **Neue Fahrten und News**: standardmäßig aus, weil kostenlose Mail-Tarife begrenzt sind (Brevo: etwa 300 Mails pro Tag). Eine neue Fahrt würde sonst an alle 500 Personen gehen.
+
+Einrichtung (am einfachsten mit der Supabase CLI auf deinem Rechner, `npm i -g supabase`):
+
+1. Bei Brevo (oder einem anderen Anbieter, dann `index.ts` anpassen) ein Konto anlegen, eine Absenderadresse bestätigen und einen API-Schlüssel erzeugen.
+2. Function bereitstellen:
+
+   ```bash
+   supabase login
+   supabase link --project-ref DEIN-PROJEKT
+   supabase functions deploy notify-email --no-verify-jwt
+   supabase secrets set BREVO_API_KEY=... MAIL_FROM=info@dein-verein.de MAIL_FROM_NAME="Dein Fanclub" \
+     APP_URL=https://thomasbiebl.github.io/TestRepo/ WEBHOOK_SECRET=ein-langes-zufaelliges-passwort
+   ```
+3. In Supabase unter *Database → Webhooks* einen Webhook anlegen: Tabelle `notifications`, Ereignis `Insert`, Typ *Supabase Edge Functions*, Function `notify-email`, zusätzlicher HTTP-Header `x-webhook-secret` mit demselben Wert wie `WEBHOOK_SECRET`.
+4. Testen: eine Fahrt absagen, für die du gebucht hast. Die Mail kommt kurz danach. Fehler siehst du unter *Edge Functions → notify-email → Logs*.
+
+Die Function ist nicht automatisch getestet. Nur der Aufbau der Mails ist es (`tests/notifyEmail.test.ts`). Prüfe sie deshalb einmal selbst.
+
+Push-Nachrichten aufs Handy (Web Push) sind nicht eingebaut. Sie brauchen zusätzliche Schlüssel und einen weiteren Dienst, und auf dem iPhone funktionieren sie nur, wenn die App auf dem Startbildschirm liegt.
+
 ## So ist der Zugriff geschützt
 
 - Gäste (nicht angemeldet) sehen nur den Vereinsnamen.

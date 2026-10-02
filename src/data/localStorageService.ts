@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, type Snapshot, type Trip, type User } from '../domain/types';
+import { deriveNotifications } from '../domain/notifications';
 import { allocateAll, allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
@@ -11,10 +12,11 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 /** Fills fields that older stored data does not have yet. */
 function migrate(raw: Partial<Snapshot>): Snapshot {
   return {
-    users: raw.users ?? [],
+    users: (raw.users ?? []).map((u) => ({ ...u, emailPersonal: u.emailPersonal ?? true, emailBroadcast: u.emailBroadcast ?? false })),
     trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '', stops: t.stops ?? [], buses: t.buses ?? 1, points: t.points ?? 1 })),
     bookings: (raw.bookings ?? []).map((b) => ({ ...b, companions: b.companions ?? 0, companionNames: b.companionNames ?? '', paid: b.paid ?? false })),
     news: raw.news ?? [],
+    notifications: raw.notifications ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
   };
 }
@@ -47,16 +49,23 @@ export class LocalStorageService implements DataService {
   /** Reads, applies a change, hands out due seats and stores the result. */
   private async mutate(fn: (s: Snapshot, now: number) => Snapshot | string): Promise<Result> {
     const now = Date.now();
-    const out = fn(allocateAll(await this.read(), now), now);
+    const start = await this.read();
+    const out = fn(allocateAll(start, now), now);
     if (typeof out === 'string') return fail(out);
-    this.write(allocateAll(out, now));
+    this.write(this.withNotifications(start, allocateAll(out, now), now));
     return ok;
+  }
+
+  /** Adds the messages that follow from the difference between two states. */
+  private withNotifications(before: Snapshot, after: Snapshot, now: number): Snapshot {
+    const fresh = deriveNotifications(before, after, now, uid);
+    return fresh.length === 0 ? after : { ...after, notifications: [...fresh, ...after.notifications].slice(0, 500) };
   }
 
   async load(): Promise<Snapshot> {
     const snap = await this.read();
     const next = allocateAll(snap, Date.now());
-    return next === snap ? snap : this.write(next);
+    return next === snap ? snap : this.write(this.withNotifications(snap, next, Date.now()));
   }
 
   addUser = (user: User): Promise<Result> =>
@@ -89,7 +98,7 @@ export class LocalStorageService implements DataService {
         return 'Du bist der einzige Admin. Ernenne zuerst jemand anderen zum Admin.';
       }
       const bookings = s.bookings.filter((b) => b.userId !== id);
-      return { ...s, users: s.users.filter((u) => u.id !== id), bookings: s.trips.reduce((acc, t) => promoteWaitlist(acc, t), bookings) };
+      return { ...s, users: s.users.filter((u) => u.id !== id), notifications: s.notifications.filter((n) => n.userId !== id), bookings: s.trips.reduce((acc, t) => promoteWaitlist(acc, t), bookings) };
     });
 
   deleteUser: DataService['deleteUser'] = (id) =>
@@ -182,6 +191,15 @@ export class LocalStorageService implements DataService {
       const rest = s.bookings.filter((b) => b.id !== mine.id);
       return { ...s, bookings: promoteWaitlist(rest, trip) };
     });
+
+  markNotificationsRead: DataService['markNotificationsRead'] = (userId) =>
+    this.mutate((s, now) => ({
+      ...s,
+      notifications: s.notifications.map((n) => (n.userId === userId && !n.readAt ? { ...n, readAt: new Date(now).toISOString() } : n)),
+    }));
+
+  updateNotificationPrefs: DataService['updateNotificationPrefs'] = (userId, prefs) =>
+    this.mutate((s) => ({ ...s, users: s.users.map((u) => (u.id === userId ? { ...u, ...prefs } : u)) }));
 
   saveNews: DataService['saveNews'] = (id, input, authorId) =>
     this.mutate((s, now) => {

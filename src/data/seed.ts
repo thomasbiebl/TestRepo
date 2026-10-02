@@ -22,7 +22,7 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
   const demoHash = await hashPassword(DEMO_PASSWORD);
   const mk = (id: string, name: string, baseTrips: number, isMember = true): User => ({
     id, name, email: `${id}@fanclub.test`, passwordHash: demoHash, isMember, isAdmin: false,
-    memberRequested: false, baseTrips, createdAt: iso(now - 90 * DAY),
+    memberRequested: false, baseTrips, createdAt: iso(now - 90 * DAY), emailPersonal: true, emailBroadcast: false,
   });
   const users: User[] = [
     { ...mk('admin', 'Admin', 30), email: ADMIN_EMAIL, passwordHash: await hashPassword(ADMIN_PASSWORD), isAdmin: true },
@@ -83,5 +83,5 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
       body: 'Die Fahrt nach Augsburg ist online. Mitglieder können jetzt Interesse bekunden.\nAbfahrt am Parkplatz Stadion.',
     },
   ];
-  return { users, trips, bookings, news, settings: { ...DEFAULT_SETTINGS } };
+  return { users, trips, bookings, news, settings: { ...DEFAULT_SETTINGS }, notifications: [] };
 }

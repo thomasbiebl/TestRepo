@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { buildMyExport } from '../src/domain/exports';
 import { buildIcs } from '../src/domain/ics';
+import { deriveNotifications } from '../src/domain/notifications';
 import { buildParticipantCsv, passengersByBus } from '../src/domain/participants';
 import {
-  allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, noShowCount, pastTripCount, promoteWaitlist, tripTotals, userScore, validateSettings, waitlistOf,
+  allocateAll, allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, noShowCount, pastTripCount, promoteWaitlist, tripTotals, userScore, validateSettings, waitlistOf,
 } from '../src/domain/rules';
 import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
@@ -13,7 +14,7 @@ const iso = (ms: number) => new Date(ms).toISOString();
 
 const user = (id: string, o: Partial<User> = {}): User => ({
   id, email: `${id}@x.de`, name: id, passwordHash: '', isMember: true, isAdmin: false,
-  memberRequested: false, baseTrips: 0, createdAt: iso(T0), ...o,
+  memberRequested: false, baseTrips: 0, createdAt: iso(T0), emailPersonal: true, emailBroadcast: false, ...o,
 });
 const trip = (o: Partial<Trip> = {}): Trip => ({
   id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '', stops: [], buses: 1, points: 1,
@@ -23,7 +24,7 @@ const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1
   id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '', paid: false,
 });
 const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
-  users, trips, bookings, news: [], settings: { ...DEFAULT_SETTINGS, ...settings },
+  users, trips, bookings, news: [], notifications: [], settings: { ...DEFAULT_SETTINGS, ...settings },
 });
 
 describe('phases', () => {
@@ -297,5 +298,47 @@ describe('points, no-shows and payment', () => {
     expect(csv.startsWith('﻿"Name";"E-Mail"')).toBe(true);
     expect(csv).toContain('"Bert ""B""";"bert@x.de";"bestätigt";"2";"1";"Moritz";"";"1";"20,00";"nein";""');
     expect(csv).toContain('"Anna";"anna@x.de";"bestätigt";"1";"0";"";"Bahnhof";"2";"10,00";"ja";"ja"');
+  });
+});
+
+describe('notifications', () => {
+  let n = 0;
+  const id = () => `n${++n}`;
+  const types = (list: { userId: string; type: string }[]) => list.map((x) => `${x.userId}:${x.type}`).sort();
+
+  it('tells people about the allocation: confirmed or waiting list', () => {
+    const users = [user('a', { baseTrips: 9 }), user('b', { baseTrips: 1 })];
+    const before = snap(users, [trip({ seats: 1 })], [booking('a', 'interested', 1), booking('b', 'interested', 2)]);
+    const after = allocateAll(before, T0 + 3 * DAY);
+    expect(types(deriveNotifications(before, after, T0 + 3 * DAY, id))).toEqual(['a:allocated', 'b:waitlisted']);
+  });
+
+  it('tells a person who moved up from the waiting list, but not about their own booking', () => {
+    const before = snap([user('a'), user('w')], [trip()], [booking('a', 'confirmed'), { ...booking('w', 'waitlist'), queuedAt: iso(T0) }]);
+    const after = { ...before, bookings: promoteWaitlist(before.bookings.filter((b) => b.userId !== 'a'), before.trips[0]!) };
+    expect(types(deriveNotifications(before, after, T0, id))).toEqual(['w:promoted']);
+    const booked = { ...before, bookings: [...before.bookings, booking('x', 'confirmed')] };
+    expect(deriveNotifications(before, booked, T0, id)).toEqual([]);
+  });
+
+  it('sends new trips to everybody, news to everybody but the author, and cancellations to booked people', () => {
+    const users = [user('a'), user('b'), user('c')];
+    const base = snap(users, [], []);
+    const withTrip = { ...base, trips: [trip()] };
+    expect(types(deriveNotifications(base, withTrip, T0, id))).toEqual(['a:new_trip', 'b:new_trip', 'c:new_trip']);
+
+    const withNews = { ...base, news: [{ id: 'x', title: 'Hallo', body: 'Text', authorId: 'a', pinned: false, createdAt: iso(T0) }] };
+    expect(types(deriveNotifications(base, withNews, T0, id))).toEqual(['b:news', 'c:news']);
+
+    const booked = snap(users, [trip()], [booking('a', 'confirmed'), booking('b', 'interested')]);
+    const cancelled = { ...booked, trips: [trip({ cancelledAt: iso(T0), cancelReason: 'Schnee' })] };
+    const out = deriveNotifications(booked, cancelled, T0, id);
+    expect(types(out)).toEqual(['a:trip_cancelled', 'b:trip_cancelled']);
+    expect(out[0]!.body).toBe('Schnee');
+  });
+
+  it('does not repeat messages when nothing changed', () => {
+    const s = snap([user('a')], [trip()], [booking('a', 'confirmed')]);
+    expect(deriveNotifications(s, s, T0, id)).toEqual([]);
   });
 });
