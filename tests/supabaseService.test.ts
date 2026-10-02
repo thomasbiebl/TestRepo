@@ -23,7 +23,7 @@ function fakeClient(tables: Record<string, unknown[]>, loggedIn = true) {
   const client = {
     auth: { getSession: () => Promise.resolve({ data: { session: loggedIn ? { user: { id: 'u1' } } : null } }) },
     from: (t: string) => query(t),
-    rpc: (fn: string, args?: unknown) => (calls.push(`rpc ${fn} ${JSON.stringify(args ?? {})}`), Promise.resolve({ error: null })),
+    rpc: (fn: string, args?: unknown) => (calls.push(`rpc ${fn} ${JSON.stringify(args ?? {})}`), Promise.resolve({ data: { added: 1, updated: 0, promoted: 0 }, error: null })),
   };
   return { sb: client as unknown as SupabaseClient, calls };
 }
@@ -37,6 +37,8 @@ describe('SupabaseService', () => {
       trips: [{ id: 't1', title: 'A', departure: '2026-12-01T08:00:00Z', meeting_point: 'P', price: '28.00', seats: 50, created_at: '2026-11-01T00:00:00Z', interest_ends_at: '2026-11-04T00:00:00Z', allocated_at: null, kickoff: null, return_time: null, notes: '', cancelled_at: null, cancel_reason: null, stops: null, buses: 1, points: 2 }],
       bookings: [{ id: 'b1', trip_id: 't1', user_id: 'u1', status: 'interested', created_at: '2026-11-02T00:00:00Z', queued_at: null, companions: 1, companion_names: 'Petra', stop: null, bus: null, paid: true, attended: false }],
       notifications: [{ id: 'x1', user_id: 'u1', type: 'allocated', title: 'Platz bestätigt', body: 'b', trip_id: 't1', created_at: '2026-11-05T00:00:00Z', read_at: null }],
+      member_roster: [{ email: 'max@x.de', name: 'Max', member_number: '7' }],
+      member_secrets: [{ member_code: 'geheim' }],
       news: [{ id: 'n1', title: 'Hi', body: 'Text', author_id: null, pinned: true, created_at: '2026-11-01T00:00:00Z', updated_at: null }],
     });
     const snap = await new SupabaseService(sb).load();
@@ -45,6 +47,8 @@ describe('SupabaseService', () => {
     expect(snap.trips[0]).toMatchObject({ meetingPoint: 'P', price: 28, allocatedAt: undefined });
     expect(snap.bookings[0]).toMatchObject({ tripId: 't1', userId: 'u1', status: 'interested', companions: 1, companionNames: 'Petra', paid: true, attended: false });
     expect(snap.trips[0]).toMatchObject({ points: 2 });
+    expect(snap.roster).toEqual([{ email: 'max@x.de', name: 'Max', memberNumber: '7' }]);
+    expect(snap.settings.memberCode).toBe('geheim');
     expect(snap.notifications[0]).toMatchObject({ userId: 'u1', type: 'allocated', tripId: 't1', readAt: undefined });
     expect(snap.news[0]).toMatchObject({ authorId: '', pinned: true });
     const anna = snap.users.find((u) => u.id === 'u1')!;
@@ -69,6 +73,9 @@ describe('SupabaseService', () => {
     await svc.endInterestNow('t1');
     await svc.deleteUser('u2');
     await svc.cancelTrip('t1', 'Schnee');
+    await svc.importRoster([{ email: 'a@b.de', name: 'A', memberNumber: '1' }]);
+    await svc.clearRoster();
+    await svc.redeemMemberCode('u1', 'abcd');
     await svc.markNotificationsRead('u1');
     await svc.updateNotificationPrefs('u1', { emailPersonal: true, emailBroadcast: false });
     await svc.setBookingBus('b1', 2);
@@ -77,7 +84,7 @@ describe('SupabaseService', () => {
     await svc.updateMyName('u1', 'Neu');
     await svc.deleteMyAccount('u1');
     const rpcs = calls.filter((c) => c.startsWith('rpc ')).map((c) => /^rpc (\w+) (.*)$/.exec(c)!);
-    expect(rpcs.length).toBe(12);
+    expect(rpcs.length).toBe(15);
     for (const [, fn, args] of rpcs) {
       const decl = [...migration.matchAll(new RegExp(`create function public\\.${fn}\\(([^)]*)\\)`, 'g'))].at(-1);
       expect(decl, `function ${fn} exists in migration`).not.toBeNull();
@@ -89,7 +96,7 @@ describe('SupabaseService', () => {
     const { sb, calls } = fakeClient({});
     const svc = new SupabaseService(sb);
     await svc.saveTrip(null, { title: 'A', departure: '2026-12-01T08:00:00.000Z', meetingPoint: 'P', price: 10, seats: 5, notes: '', stops: [], buses: 1, points: 1 });
-    await svc.saveSettings({ clubName: 'X', interestDays: 1, guestsMayBook: true, waitlistEnabled: true, defaultSeats: 1, defaultPrice: 0, defaultMeetingPoint: 'P', cancelDeadlineHours: 0, maxCompanions: 3, noShowPenalty: 0 });
+    await svc.saveSettings({ clubName: 'X', interestDays: 1, guestsMayBook: true, waitlistEnabled: true, defaultSeats: 1, defaultPrice: 0, defaultMeetingPoint: 'P', cancelDeadlineHours: 0, maxCompanions: 3, noShowPenalty: 0, memberCode: 'abcd' });
     const written = calls.filter((c) => /^(insert|update)/.test(c)).flatMap((c) => Object.keys(JSON.parse(c.slice(c.indexOf('{')))));
     expect(written.length).toBeGreaterThan(8);
     for (const col of written) expect(migration, `column ${col}`).toContain(col);

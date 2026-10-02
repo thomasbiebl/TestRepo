@@ -16,6 +16,7 @@ export function Profile() {
   const [password, setPassword] = useState('');
   const [pwError, setPwError] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [code, setCode] = useState('');
   if (!snap || !user) return null;
 
   const leave = () => {
@@ -68,6 +69,15 @@ export function Profile() {
             {noShowCount(user, snap.trips, snap.bookings, now) > 0 && ` · Nicht erschienen: ${noShowCount(user, snap.trips, snap.bookings, now)}`}
           </p>
         </section>
+
+        {!user.isMember && (
+          <form className="card form" onSubmit={async (e) => { e.preventDefault(); if (await act(() => data.redeemMemberCode(user.id, code), 'Willkommen bei den Mitgliedern!')) setCode(''); }}>
+            <h3>Mitgliedscode</h3>
+            <label htmlFor="p-code">Hast du einen Code vom Verein?</label>
+            <input id="p-code" autoComplete="off" autoCapitalize="off" required value={code} onChange={(e) => setCode(e.target.value)} />
+            <button className="btn ghost">Code einlösen</button>
+          </form>
+        )}
 
         <form className="card form" onSubmit={saveName}>
           <h3>Name ändern</h3>

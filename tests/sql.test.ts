@@ -65,7 +65,8 @@ beforeAll(async () => {
 afterAll(() => db.close());
 
 beforeEach(async () => {
-  await db.exec(`delete from bookings; delete from trips; delete from news; delete from auth.users;
+  await db.exec(`delete from bookings; delete from trips; delete from news; delete from auth.users; delete from member_roster; delete from member_code_attempts;
+    update member_secrets set member_code = '';
     update settings set club_name = 'Fanclub', interest_days = 3, guests_may_book = true, waitlist_enabled = true`);
   await addUser('admin', { member: true, admin: true });
   await addUser('anna', { member: true, base: 5 });
@@ -351,6 +352,60 @@ describe('notifications', () => {
     expect((await db.query(`select count(*)::int as n from notifications where user_id = $1 and read_at is null`, [ids.max])).rows[0]).toEqual({ n: 1 });
     await as('anna', `select update_my_notification_prefs(false, true)`);
     expect((await db.query(`select email_personal, email_broadcast from profiles where id = $1`, [ids.anna])).rows[0]).toEqual({ email_personal: false, email_broadcast: true });
+  });
+});
+
+describe('member list and member code', () => {
+  const entries = JSON.stringify([
+    { email: 'Lukas@X.de', name: 'Lukas', memberNumber: '5' },
+    { email: 'neu@x.de', name: 'Neu', memberNumber: '6' },
+    { email: 'kaputt', name: 'x' },
+  ]);
+
+  it('lets only admins import, and promotes registered people and later sign-ups', async () => {
+    expect(await asErr('anna', `select admin_import_roster($1::jsonb)`, [entries])).toMatch(/Admins/);
+    const res = await as<{ admin_import_roster: { added: number; updated: number; promoted: number } }>('admin', `select admin_import_roster($1::jsonb)`, [entries]);
+    expect(res[0]!.admin_import_roster).toEqual({ added: 2, updated: 0, promoted: 1 });
+    expect((await db.query(`select is_member from profiles where id = $1`, [ids.lukas])).rows[0]).toEqual({ is_member: true });
+    await db.query(`insert into auth.users (email, raw_user_meta_data) values ('Neu@X.de', '{"full_name": "Neu Person"}')`);
+    expect((await db.query(`select is_member, name from profiles where email = 'Neu@X.de'`)).rows[0]).toEqual({ is_member: true, name: 'Neu Person' });
+    const again = await as<{ admin_import_roster: { updated: number } }>('admin', `select admin_import_roster($1::jsonb)`, [entries]);
+    expect(again[0]!.admin_import_roster.updated).toBe(2);
+  });
+
+  it('keeps the list and the code away from everybody but admins', async () => {
+    await as('admin', `select admin_import_roster($1::jsonb)`, [entries]);
+    await as('admin', `select admin_set_member_code('Adler1899')`);
+    expect(await as('anna', `select * from member_roster`)).toEqual([]);
+    expect(await as('anna', `select * from member_secrets`)).toEqual([]);
+    expect(await as('admin', `select member_code from member_secrets`)).toEqual([{ member_code: 'Adler1899' }]);
+    expect(await as('admin', `select email from member_roster order by email`)).toHaveLength(2);
+    await db.exec(`set role anon`);
+    await expect(db.query(`select * from member_secrets`)).rejects.toThrow(/permission denied/);
+    expect((await db.query(`select * from settings`)).rows[0]).not.toHaveProperty('member_code');
+    await db.exec(`reset role`);
+    expect(await asErr('anna', `select admin_set_member_code('xx')`)).toMatch(/Admins/);
+    expect(await asErr('admin', `select admin_set_member_code('xx')`)).toMatch(/4 bis 40/);
+  });
+
+  it('turns a user into a member with the right code and slows down guessing', async () => {
+    const redeem = async (code: string) => (await as<{ redeem_member_code: boolean }>('lukas', `select redeem_member_code($1)`, [code]))[0]!.redeem_member_code;
+    expect(await redeem('irgendwas')).toBe(false); // no code set yet
+    await db.query(`delete from member_code_attempts`);
+    await as('admin', `select admin_set_member_code('Adler1899')`);
+    for (let i = 0; i < 5; i++) expect(await redeem(`falsch${i}`)).toBe(false);
+    expect(await asErr('lukas', `select redeem_member_code('nochmal')`)).toMatch(/Zu viele Versuche/);
+    expect(await asErr('lukas', `select redeem_member_code('Adler1899')`)).toMatch(/Zu viele Versuche/);
+    await db.query(`delete from member_code_attempts`);
+    expect(await redeem(' adler1899 ')).toBe(true);
+    expect((await db.query(`select is_member from profiles where id = $1`, [ids.lukas])).rows[0]).toEqual({ is_member: true });
+  });
+
+  it('clears the list on request', async () => {
+    await as('admin', `select admin_import_roster($1::jsonb)`, [entries]);
+    await as('admin', `select admin_clear_roster()`);
+    expect(await as('admin', `select * from member_roster`)).toEqual([]);
+    expect((await db.query(`select is_member from profiles where id = $1`, [ids.lukas])).rows[0]).toEqual({ is_member: true });
   });
 });
 

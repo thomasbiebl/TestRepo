@@ -75,6 +75,13 @@ export interface BookOptions {
   stop?: string;
 }
 
+export interface RosterEntry {
+  /** Always lower case. */
+  email: string;
+  name: string;
+  memberNumber: string;
+}
+
 export type NotificationType = 'allocated' | 'waitlisted' | 'promoted' | 'trip_cancelled' | 'new_trip' | 'news';
 
 export interface Notification {
@@ -118,6 +125,8 @@ export interface Settings {
   maxCompanions: number;
   /** Points deducted from the ranking score for each no-show (0 = off). */
   noShowPenalty: number;
+  /** Code that makes a user a member when entered in the profile. Empty = off. Only admins get to see it. */
+  memberCode: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -131,6 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cancelDeadlineHours: 0,
   maxCompanions: 3,
   noShowPenalty: 0,
+  memberCode: '',
 };
 
 export interface Snapshot {
@@ -141,4 +151,6 @@ export interface Snapshot {
   settings: Settings;
   /** Messages of the logged-in user (the demo keeps everyone's). */
   notifications: Notification[];
+  /** Imported member list (admins only). */
+  roster: RosterEntry[];
 }

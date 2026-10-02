@@ -17,6 +17,7 @@ function migrate(raw: Partial<Snapshot>): Snapshot {
     bookings: (raw.bookings ?? []).map((b) => ({ ...b, companions: b.companions ?? 0, companionNames: b.companionNames ?? '', paid: b.paid ?? false })),
     news: raw.news ?? [],
     notifications: raw.notifications ?? [],
+    roster: raw.roster ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
   };
 }
@@ -69,9 +70,41 @@ export class LocalStorageService implements DataService {
   }
 
   addUser = (user: User): Promise<Result> =>
-    this.mutate((s) =>
-      s.users.some((u) => u.email === user.email) ? 'Diese E-Mail-Adresse ist schon registriert.' : { ...s, users: [...s.users, user] },
-    );
+    this.mutate((s) => {
+      if (s.users.some((u) => u.email === user.email)) return 'Diese E-Mail-Adresse ist schon registriert.';
+      const onRoster = s.roster.some((r) => r.email === user.email.toLowerCase());
+      return { ...s, users: [...s.users, onRoster ? { ...user, isMember: true, memberRequested: false } : user] };
+    });
+
+  importRoster: DataService['importRoster'] = async (entries) => {
+    let added = 0;
+    let updated = 0;
+    let promoted = 0;
+    const res = await this.mutate((s) => {
+      const roster = new Map(s.roster.map((r) => [r.email, r]));
+      for (const e of entries) {
+        if (roster.has(e.email)) updated++;
+        else added++;
+        roster.set(e.email, e);
+      }
+      const users = s.users.map((u) => {
+        if (u.isMember || !roster.has(u.email.toLowerCase())) return u;
+        promoted++;
+        return { ...u, isMember: true, memberRequested: false };
+      });
+      return { ...s, roster: [...roster.values()], users };
+    });
+    return res.ok ? { ok: true, added, updated, promoted } : res;
+  };
+
+  clearRoster: DataService['clearRoster'] = () => this.mutate((s) => ({ ...s, roster: [] }));
+
+  redeemMemberCode: DataService['redeemMemberCode'] = (userId, code) =>
+    this.mutate((s) => {
+      const expected = s.settings.memberCode.trim().toLowerCase();
+      if (!expected || code.trim().toLowerCase() !== expected) return 'Dieser Code stimmt nicht.';
+      return { ...s, users: s.users.map((u) => (u.id === userId ? { ...u, isMember: true, memberRequested: false } : u)) };
+    });
 
   updateUser: DataService['updateUser'] = (id, patch) =>
     this.mutate((s) => {

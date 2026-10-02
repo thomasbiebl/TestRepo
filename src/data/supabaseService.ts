@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Notification, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
+import { DEFAULT_SETTINGS, type Booking, type NewsPost, type Notification, type RosterEntry, type Settings, type Snapshot, type Trip, type User } from '../domain/types';
 import { validateSettings } from '../domain/rules';
 import type { DataService, Result } from './DataService';
 
@@ -9,6 +9,7 @@ interface TripRow { id: string; title: string; departure: string; meeting_point:
 interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null; companions: number; companion_names: string; stop: string | null; bus: number | null; paid: boolean; attended: boolean | null }
 interface NewsRow { id: string; title: string; body: string; author_id: string | null; pinned: boolean; created_at: string; updated_at: string | null }
 interface NotificationRow { id: string; user_id: string; type: Notification['type']; title: string; body: string; trip_id: string | null; created_at: string; read_at: string | null }
+interface RosterRow { email: string; name: string; member_number: string }
 interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number; max_companions: number; no_show_penalty: number }
 
 const toUser = (r: ProfileRow): User => ({
@@ -40,7 +41,7 @@ const toSettings = (r: SettingsRow | null): Settings =>
     clubName: r.club_name, interestDays: r.interest_days, guestsMayBook: r.guests_may_book, waitlistEnabled: r.waitlist_enabled,
     defaultSeats: r.default_seats, defaultPrice: Number(r.default_price), defaultMeetingPoint: r.default_meeting_point,
     cancelDeadlineHours: r.cancel_deadline_hours, maxCompanions: r.max_companions,
-    noShowPenalty: r.no_show_penalty,
+    noShowPenalty: r.no_show_penalty, memberCode: '',
   } : { ...DEFAULT_SETTINGS };
 
 const ok: Result = { ok: true };
@@ -55,20 +56,22 @@ export class SupabaseService implements DataService {
     const settingsRes = await this.sb.from('settings').select('*').eq('id', 1).maybeSingle();
     if (settingsRes.error) throw settingsRes.error;
     const settings = toSettings(settingsRes.data as SettingsRow | null);
-    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings, notifications: [] };
+    if (!session.session) return { users: [], trips: [], bookings: [], news: [], settings, notifications: [], roster: [] };
 
     // Hands out seats for trips whose member phase is over. Safe to call any time.
     await this.sb.rpc('allocate_due_trips');
 
-    const [names, profiles, trips, bookings, news, notifications] = await Promise.all([
+    const [names, profiles, trips, bookings, news, notifications, roster, secrets] = await Promise.all([
       this.sb.from('public_profiles').select('id, name, base_trips, is_member'),
       this.sb.from('profiles').select('*'),
       this.sb.from('trips').select('*'),
       this.sb.from('bookings').select('*'),
       this.sb.from('news').select('*'),
       this.sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(100),
+      this.sb.from('member_roster').select('*').order('email'),
+      this.sb.from('member_secrets').select('member_code').eq('id', 1).maybeSingle(),
     ]);
-    for (const res of [names, profiles, trips, bookings, news, notifications]) if (res.error) throw res.error;
+    for (const res of [names, profiles, trips, bookings, news, notifications, roster, secrets]) if (res.error) throw res.error;
 
     // Everyone sees names; admins see full profiles, others only their own.
     const users = new Map((names.data as ProfileRow[]).map((r) => [r.id, toUser(r)]));
@@ -79,8 +82,10 @@ export class SupabaseService implements DataService {
       trips: (trips.data as TripRow[]).map(toTrip),
       bookings: (bookings.data as BookingRow[]).map(toBooking),
       news: (news.data as NewsRow[]).map(toNews),
-      settings,
+      // The member code is only returned to admins; everybody else gets an empty one.
+      settings: { ...settings, memberCode: (secrets.data as { member_code: string } | null)?.member_code ?? '' },
       notifications: (notifications.data as NotificationRow[]).map(toNotification),
+      roster: (roster.data as RosterRow[]).map((r): RosterEntry => ({ email: r.email, name: r.name, memberNumber: r.member_number })),
     };
   }
 
@@ -145,6 +150,21 @@ export class SupabaseService implements DataService {
   updateNotificationPrefs: DataService['updateNotificationPrefs'] = async (_userId, prefs) =>
     fail((await this.sb.rpc('update_my_notification_prefs', { p_personal: prefs.emailPersonal, p_broadcast: prefs.emailBroadcast })).error);
 
+  importRoster: DataService['importRoster'] = async (entries) => {
+    const { data, error } = await this.sb.rpc('admin_import_roster', { p_entries: entries });
+    if (error) return { ok: false, error: error.message };
+    const r = data as { added: number; updated: number; promoted: number };
+    return { ok: true, added: r.added, updated: r.updated, promoted: r.promoted };
+  };
+
+  clearRoster: DataService['clearRoster'] = async () => fail((await this.sb.rpc('admin_clear_roster')).error);
+
+  redeemMemberCode: DataService['redeemMemberCode'] = async (_userId, code) => {
+    const { data, error } = await this.sb.rpc('redeem_member_code', { p_code: code });
+    if (error) return fail(error);
+    return data === false ? { ok: false, error: 'Dieser Code stimmt nicht.' } : ok;
+  };
+
   saveNews: DataService['saveNews'] = async (id, input) => {
     const title = input.title.trim();
     const body = input.body.trim();
@@ -168,6 +188,7 @@ export class SupabaseService implements DataService {
       default_meeting_point: clean.defaultMeetingPoint, cancel_deadline_hours: clean.cancelDeadlineHours,
       max_companions: clean.maxCompanions, no_show_penalty: clean.noShowPenalty,
     }).eq('id', 1);
-    return fail(error);
+    if (error) return fail(error);
+    return fail((await this.sb.rpc('admin_set_member_code', { p_code: clean.memberCode })).error);
   };
 }

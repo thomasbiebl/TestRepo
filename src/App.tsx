@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import { AdminHome } from './pages/AdminHome';
 import { AdminNews } from './pages/AdminNews';
 import { AdminSettings } from './pages/AdminSettings';
+import { AdminRoster } from './pages/AdminRoster';
 import { AdminTripList } from './pages/AdminTripList';
 import { AdminTrips } from './pages/AdminTrips';
 import { AdminUsers } from './pages/AdminUsers';
@@ -55,6 +56,7 @@ export function App() {
             <Route path="admin/trips" element={<AdminTrips />} />
             <Route path="admin/trips/:id/list" element={<AdminTripList />} />
             <Route path="admin/users" element={<AdminUsers />} />
+            <Route path="admin/roster" element={<AdminRoster />} />
             <Route path="admin/news" element={<AdminNews />} />
             <Route path="admin/settings" element={<AdminSettings />} />
           </Route>

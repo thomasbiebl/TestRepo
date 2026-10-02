@@ -1,6 +1,8 @@
-import type { BookOptions, NewsPost, Settings, Snapshot, Trip, User } from '../domain/types';
+import type { BookOptions, NewsPost, RosterEntry, Settings, Snapshot, Trip, User } from '../domain/types';
 
 export type Result = { ok: true } | { ok: false; error: string };
+
+export type ImportResult = { ok: true; added: number; updated: number; promoted: number } | { ok: false; error: string };
 
 export type NewsInput = Pick<NewsPost, 'title' | 'body' | 'pinned'>;
 
@@ -37,6 +39,12 @@ export interface DataService {
   setBookingPaid(bookingId: string, paid: boolean): Promise<Result>;
   /** Admin: boarded (true), did not show up (false), or not recorded (null). */
   setBookingAttendance(bookingId: string, attended: boolean | null): Promise<Result>;
+
+  /** Admin: adds or updates the member list and makes registered people members. */
+  importRoster(entries: RosterEntry[]): Promise<ImportResult>;
+  clearRoster(): Promise<Result>;
+  /** Becomes a member by entering the member code. */
+  redeemMemberCode(userId: string, code: string): Promise<Result>;
 
   markNotificationsRead(userId: string): Promise<Result>;
   updateNotificationPrefs(userId: string, prefs: { emailPersonal: boolean; emailBroadcast: boolean }): Promise<Result>;

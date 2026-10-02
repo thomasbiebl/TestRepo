@@ -47,6 +47,10 @@ Lokal: `.env.example` nach `.env.local` kopieren, Werte eintragen, `npm run dev`
    ```
 3. App neu laden. Der Admin-Bereich erscheint. Weitere Admins und Mitglieder setzt du dort in der Benutzerverwaltung.
 
+**Mitglieder in großer Zahl:** Unter *Admin → Mitgliederliste importieren* fügst du die Mitgliederliste ein (aus Excel kopiert: E-Mail, Name, Mitgliedsnummer). Wer sich mit einer dieser Adressen registriert, ist sofort Mitglied, bereits registrierte Personen werden beim Import zu Mitgliedern. Alternativ legst du unter *Admin → Einstellungen* einen **Mitgliedscode** fest, den Mitglieder in ihrem Profil eingeben. Liste und Code können nur Admins lesen. Nach 5 falschen Eingaben pro Stunde ist für die Person erst einmal Pause.
+
+Bei E-Mail-Bestätigung (Schritt 3) ist die Liste sicher: Die Mitgliedschaft hängt an der bestätigten Adresse, denn ohne Bestätigung kann sich niemand anmelden.
+
 ## 6. Wach halten und Backup
 
 **Keep-alive:** Kostenlose Projekte werden nach etwa einer Woche ohne Aktivität pausiert. `.github/workflows/keepalive.yml` fragt täglich einmal die Datenbank an. Es nutzt die Variablen aus Schritt 4 und braucht nichts weiter.

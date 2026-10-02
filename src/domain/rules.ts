@@ -190,6 +190,8 @@ export function validateSettings(s: Settings): string | null {
     return 'Der Vorlauf für Mitglieder muss zwischen 0 und 30 Tagen liegen.';
   }
   if (!Number.isInteger(s.defaultSeats) || s.defaultSeats < 1) return 'Mindestens ein Platz als Standard.';
+  const code = s.memberCode.trim();
+  if (code && (code.length < 4 || code.length > 40)) return 'Der Mitgliedscode braucht 4 bis 40 Zeichen.';
   if (!Number.isInteger(s.noShowPenalty) || s.noShowPenalty < 0 || s.noShowPenalty > 10) {
     return 'Der Abzug bei Nichterscheinen muss zwischen 0 und 10 Punkten liegen.';
   }

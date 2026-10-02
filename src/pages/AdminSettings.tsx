@@ -3,7 +3,7 @@ import { validateSettings } from '../domain/rules';
 import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
-type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions' | 'noShowPenalty', string> &
+type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions' | 'noShowPenalty' | 'memberCode', string> &
   Pick<Settings, 'guestsMayBook' | 'waitlistEnabled'>;
 
 const toDraft = (s: Settings): Draft => ({
@@ -12,6 +12,7 @@ const toDraft = (s: Settings): Draft => ({
   cancelDeadlineHours: String(s.cancelDeadlineHours),
   maxCompanions: String(s.maxCompanions),
   noShowPenalty: String(s.noShowPenalty),
+  memberCode: s.memberCode,
   defaultSeats: String(s.defaultSeats),
   defaultPrice: String(s.defaultPrice),
   defaultMeetingPoint: s.defaultMeetingPoint,
@@ -25,6 +26,7 @@ const fromDraft = (d: Draft): Settings => ({
   cancelDeadlineHours: Number(d.cancelDeadlineHours),
   maxCompanions: Number(d.maxCompanions),
   noShowPenalty: Number(d.noShowPenalty),
+  memberCode: d.memberCode,
   defaultSeats: Number(d.defaultSeats),
   defaultPrice: Number(d.defaultPrice),
   defaultMeetingPoint: d.defaultMeetingPoint,
@@ -81,6 +83,13 @@ export function AdminSettings() {
             <input id="s-wait" type="checkbox" checked={d.waitlistEnabled} onChange={(e) => setDraft({ ...d, waitlistEnabled: e.target.checked })} />
             Warteliste bei ausgebuchten Fahrten
           </label>
+        </section>
+
+        <section className="card form">
+          <h3>Mitgliedschaft</h3>
+          <label htmlFor="s-code">Mitgliedscode</label>
+          <input id="s-code" autoComplete="off" autoCapitalize="off" minLength={4} maxLength={40} value={d.memberCode} onChange={set('memberCode')} />
+          <p className="muted">Wer diesen Code in seinem Profil eingibt, wird sofort Mitglied. Leer lassen schaltet das ab. Gib den Code nur an Mitglieder weiter und ändere ihn, wenn er bekannt wird. Mitglieder aus einer Liste importierst du unter „Mitgliederliste“.</p>
         </section>
 
         <section className="card form">

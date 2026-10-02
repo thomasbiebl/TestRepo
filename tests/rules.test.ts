@@ -24,7 +24,7 @@ const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1
   id: `${tripId}-${userId}`, tripId, userId, status, createdAt: iso(T0 + at), companions: 0, companionNames: '', paid: false,
 });
 const snap = (users: User[], trips: Trip[], bookings: Booking[], settings: Partial<Settings> = {}): Snapshot => ({
-  users, trips, bookings, news: [], notifications: [], settings: { ...DEFAULT_SETTINGS, ...settings },
+  users, trips, bookings, news: [], notifications: [], roster: [], settings: { ...DEFAULT_SETTINGS, ...settings },
 });
 
 describe('phases', () => {
