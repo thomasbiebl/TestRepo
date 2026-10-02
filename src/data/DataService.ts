@@ -4,7 +4,7 @@ export type Result = { ok: true } | { ok: false; error: string };
 
 export type NewsInput = Pick<NewsPost, 'title' | 'body' | 'pinned'>;
 
-export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats'>;
+export type TripInput = Pick<Trip, 'title' | 'departure' | 'meetingPoint' | 'price' | 'seats' | 'notes' | 'kickoff' | 'returnTime'>;
 
 /**
  * Everything the UI needs from storage. The local implementation keeps data in the browser;
@@ -23,6 +23,8 @@ export interface DataService {
 
   saveTrip(id: string | null, input: TripInput): Promise<Result>;
   deleteTrip(id: string): Promise<Result>;
+  /** Admin: cancels a trip. Bookings stay visible, nobody can book any more. */
+  cancelTrip(tripId: string, reason: string): Promise<Result>;
   /** Admin helper: ends the members-only phase right now. */
   endInterestNow(tripId: string): Promise<Result>;
 

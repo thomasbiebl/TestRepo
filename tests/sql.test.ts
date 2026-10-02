@@ -165,6 +165,49 @@ describe('accounts', () => {
   });
 });
 
+describe('trip info, cancellation and deadline', () => {
+  it('lets admins cancel a trip, after which nobody can book and nothing is allocated', async () => {
+    const trip = await addTrip(2);
+    await as('anna', `select book_trip($1)`, [trip]);
+    expect(await asErr('anna', `select admin_cancel_trip($1, 'x')`, [trip])).toMatch(/Admins/);
+    await as('admin', `select admin_cancel_trip($1, 'Schnee')`, [trip]);
+    expect((await db.query(`select cancel_reason from trips where id = $1`, [trip])).rows[0]).toEqual({ cancel_reason: 'Schnee' });
+    expect(await asErr('max', `select book_trip($1)`, [trip])).toMatch(/abgesagt/);
+    await endInterest(trip);
+    await as('anna', `select allocate_due_trips()`);
+    expect(await statuses(trip)).toEqual({ anna: 'interested' });
+    expect(await asErr('admin', `select admin_cancel_trip($1, '')`, [trip])).toMatch(/schon abgesagt/);
+  });
+
+  it('keeps cancellation state out of reach when inserting a trip', async () => {
+    const res = await as<{ id: string; cancelled_at: unknown }>('admin',
+      `insert into trips (title, departure, meeting_point, price, seats, cancelled_at) values ('X', now() + interval '5 days', 'P', 1, 1, now()) returning id, cancelled_at`);
+    expect(res[0]!.cancelled_at).toBeNull();
+  });
+
+  it('stores kickoff, return time and notes', async () => {
+    const res = await as<{ notes: string; kickoff: string | null }>('admin',
+      `insert into trips (title, departure, meeting_point, price, seats, notes, kickoff, return_time) values ('X', now() + interval '5 days', 'P', 1, 1, 'Hinweis', now() + interval '5 days', now() + interval '6 days') returning notes, kickoff`);
+    expect(res[0]!.notes).toBe('Hinweis');
+    expect(res[0]!.kickoff).not.toBeNull();
+  });
+
+  it('enforces the cancellation deadline for confirmed seats only', async () => {
+    await as('admin', `update settings set cancel_deadline_hours = 48`);
+    const trip = await addTrip(2, 0);
+    await endInterest(trip);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await as('max', `select book_trip($1)`, [trip]);
+    await as('karl', `select book_trip($1)`, [trip]);
+    await as('anna', `select cancel_booking($1)`, [trip]); // far before departure: fine
+    await db.query(`update trips set departure = now() + interval '24 hours' where id = $1`, [trip]);
+    expect(await asErr('max', `select cancel_booking($1)`, [trip])).toMatch(/48 Stunden/);
+    expect(await asErr('lukas', `select cancel_booking($1)`, [trip])).toMatch(/Keine Buchung/);
+    await as('admin', `update settings set cancel_deadline_hours = 0`);
+    await as('max', `select cancel_booking($1)`, [trip]);
+  });
+});
+
 describe('own profile', () => {
   it('lets users change their own name, and nothing else', async () => {
     await as('anna', `select update_my_name('Anna Neu')`);

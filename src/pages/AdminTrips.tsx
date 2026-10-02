@@ -12,12 +12,12 @@ const toLocalInput = (iso: string) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string }
+interface FormState { title: string; departure: string; meetingPoint: string; price: string; seats: string; kickoff: string; returnTime: string; notes: string }
 
 const emptyForm = (s: Settings): FormState => {
   const d = new Date(Date.now() + 14 * 86_400_000);
   d.setHours(8, 0, 0, 0);
-  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats) };
+  return { title: '', departure: toLocalInput(d.toISOString()), meetingPoint: s.defaultMeetingPoint, price: String(s.defaultPrice), seats: String(s.defaultSeats), kickoff: '', returnTime: '', notes: '' };
 };
 
 function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmit: (i: TripInput) => void; onCancel: () => void }) {
@@ -31,6 +31,9 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
       meetingPoint: f.meetingPoint.trim(),
       price: Math.max(0, Number(f.price) || 0),
       seats: Math.floor(Number(f.seats) || 0),
+      kickoff: f.kickoff ? new Date(f.kickoff).toISOString() : undefined,
+      returnTime: f.returnTime ? new Date(f.returnTime).toISOString() : undefined,
+      notes: f.notes.trim(),
     });
   };
   return (
@@ -51,6 +54,12 @@ function TripForm({ initial, onSubmit, onCancel }: { initial: FormState; onSubmi
           <input id="t-seats" type="number" min={1} required value={f.seats} onChange={set('seats')} />
         </div>
       </div>
+      <label htmlFor="t-kick">Anstoß (optional)</label>
+      <input id="t-kick" type="datetime-local" value={f.kickoff} onChange={set('kickoff')} />
+      <label htmlFor="t-ret">Rückfahrt (optional)</label>
+      <input id="t-ret" type="datetime-local" value={f.returnTime} onChange={set('returnTime')} />
+      <label htmlFor="t-notes">Hinweise für Mitfahrer (optional)</label>
+      <textarea id="t-notes" rows={3} value={f.notes} onChange={set('notes')} />
       <button className="btn">Speichern</button>
       <button type="button" className="btn ghost" onClick={onCancel}>Abbrechen</button>
     </form>
@@ -62,6 +71,8 @@ export function AdminTrips() {
   const [editing, setEditing] = useState<Trip | 'new' | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [reason, setReason] = useState('');
   if (!snap) return null;
 
   const save = async (id: string | null, input: TripInput) => {
@@ -76,7 +87,7 @@ export function AdminTrips() {
       <h1 className="title">Fahrten</h1>
       {editing ? (
         <TripForm
-          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats) }}
+          initial={editing === 'new' ? emptyForm(snap.settings) : { title: editing.title, departure: toLocalInput(editing.departure), meetingPoint: editing.meetingPoint, price: String(editing.price), seats: String(editing.seats), kickoff: editing.kickoff ? toLocalInput(editing.kickoff) : '', returnTime: editing.returnTime ? toLocalInput(editing.returnTime) : '', notes: editing.notes }}
           onSubmit={(i) => void save(editing === 'new' ? null : editing.id, i)}
           onCancel={() => setEditing(null)}
         />
@@ -101,6 +112,7 @@ export function AdminTrips() {
                 <button className="chip" onClick={() => setOpen(isOpen ? null : t.id)}>{isOpen ? 'Teilnehmer ausblenden' : 'Teilnehmer'}</button>
                 <button className="chip" onClick={() => setEditing(t)}>Bearbeiten</button>
                 {phase === 'interest' && <button className="chip" onClick={() => void act(() => data.endInterestNow(t.id), 'Plätze vergeben.')}>Interessensphase beenden</button>}
+                {(phase === 'interest' || phase === 'open') && <button className="chip" onClick={() => { setCancelId(cancelId === t.id ? null : t.id); setReason(''); }}>Fahrt absagen</button>}
                 {confirmId === t.id ? (
                   <>
                     <button className="chip danger" onClick={() => { setConfirmId(null); void act(() => data.deleteTrip(t.id), 'Fahrt gelöscht.'); }}>Wirklich löschen</button>
@@ -110,6 +122,16 @@ export function AdminTrips() {
                   <button className="chip" onClick={() => setConfirmId(t.id)}>Löschen</button>
                 )}
               </div>
+              {cancelId === t.id && (
+                <div className="form">
+                  <label htmlFor={`c-${t.id}`}>Grund der Absage (optional, sehen alle)</label>
+                  <input id={`c-${t.id}`} value={reason} onChange={(e) => setReason(e.target.value)} />
+                  <div className="chips">
+                    <button className="chip danger" onClick={() => { setCancelId(null); void act(() => data.cancelTrip(t.id, reason), 'Fahrt abgesagt.'); }}>Fahrt jetzt absagen</button>
+                    <button className="chip" onClick={() => setCancelId(null)}>Abbrechen</button>
+                  </div>
+                </div>
+              )}
               {isOpen && (
                 <ul className="people">
                   {list.length === 0 && <li className="muted">Noch keine Einträge.</li>}

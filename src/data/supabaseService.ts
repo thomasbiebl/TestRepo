@@ -5,10 +5,10 @@ import type { DataService, Result } from './DataService';
 
 // Row shapes as they come from Postgres.
 interface ProfileRow { id: string; email?: string; name: string; is_member: boolean; is_admin?: boolean; member_requested?: boolean; base_trips: number; created_at?: string }
-interface TripRow { id: string; title: string; departure: string; meeting_point: string; price: number | string; seats: number; created_at: string; interest_ends_at: string; allocated_at: string | null }
+interface TripRow { id: string; title: string; departure: string; meeting_point: string; price: number | string; seats: number; created_at: string; interest_ends_at: string; allocated_at: string | null; kickoff: string | null; return_time: string | null; notes: string; cancelled_at: string | null; cancel_reason: string | null }
 interface BookingRow { id: string; trip_id: string; user_id: string; status: Booking['status']; created_at: string; queued_at: string | null }
 interface NewsRow { id: string; title: string; body: string; author_id: string | null; pinned: boolean; created_at: string; updated_at: string | null }
-interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string }
+interface SettingsRow { club_name: string; interest_days: number; guests_may_book: boolean; waitlist_enabled: boolean; default_seats: number; default_price: number | string; default_meeting_point: string; cancel_deadline_hours: number }
 
 const toUser = (r: ProfileRow): User => ({
   id: r.id, email: r.email ?? '', name: r.name, passwordHash: '', isMember: r.is_member, isAdmin: r.is_admin ?? false,
@@ -17,6 +17,8 @@ const toUser = (r: ProfileRow): User => ({
 const toTrip = (r: TripRow): Trip => ({
   id: r.id, title: r.title, departure: r.departure, meetingPoint: r.meeting_point, price: Number(r.price), seats: r.seats,
   createdAt: r.created_at, interestEndsAt: r.interest_ends_at, allocatedAt: r.allocated_at ?? undefined,
+  kickoff: r.kickoff ?? undefined, returnTime: r.return_time ?? undefined, notes: r.notes ?? '',
+  cancelledAt: r.cancelled_at ?? undefined, cancelReason: r.cancel_reason ?? undefined,
 });
 const toBooking = (r: BookingRow): Booking => ({
   id: r.id, tripId: r.trip_id, userId: r.user_id, status: r.status, createdAt: r.created_at, queuedAt: r.queued_at ?? undefined,
@@ -28,6 +30,7 @@ const toSettings = (r: SettingsRow | null): Settings =>
   r ? {
     clubName: r.club_name, interestDays: r.interest_days, guestsMayBook: r.guests_may_book, waitlistEnabled: r.waitlist_enabled,
     defaultSeats: r.default_seats, defaultPrice: Number(r.default_price), defaultMeetingPoint: r.default_meeting_point,
+    cancelDeadlineHours: r.cancel_deadline_hours,
   } : { ...DEFAULT_SETTINGS };
 
 const ok: Result = { ok: true };
@@ -90,10 +93,14 @@ export class SupabaseService implements DataService {
   saveTrip: DataService['saveTrip'] = async (id, input) => {
     const row = {
       title: input.title, departure: input.departure, meeting_point: input.meetingPoint, price: input.price, seats: input.seats,
+      notes: input.notes, kickoff: input.kickoff ?? null, return_time: input.returnTime ?? null,
     };
     const { error } = id === null ? await this.sb.from('trips').insert(row) : await this.sb.from('trips').update(row).eq('id', id);
     return fail(error);
   };
+
+  cancelTrip: DataService['cancelTrip'] = async (tripId, reason) =>
+    fail((await this.sb.rpc('admin_cancel_trip', { p_trip: tripId, p_reason: reason })).error);
 
   deleteTrip: DataService['deleteTrip'] = async (id) => fail((await this.sb.from('trips').delete().eq('id', id)).error);
 
@@ -125,7 +132,7 @@ export class SupabaseService implements DataService {
     const { error } = await this.sb.from('settings').update({
       club_name: clean.clubName, interest_days: clean.interestDays, guests_may_book: clean.guestsMayBook,
       waitlist_enabled: clean.waitlistEnabled, default_seats: clean.defaultSeats, default_price: clean.defaultPrice,
-      default_meeting_point: clean.defaultMeetingPoint,
+      default_meeting_point: clean.defaultMeetingPoint, cancel_deadline_hours: clean.cancelDeadlineHours,
     }).eq('id', 1);
     return fail(error);
   };

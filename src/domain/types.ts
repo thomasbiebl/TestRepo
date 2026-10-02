@@ -26,6 +26,14 @@ export interface Trip {
   interestEndsAt: string;
   /** Set once the seats have been handed out after the interest phase. */
   allocatedAt?: string;
+  /** Kick-off of the match, for information. */
+  kickoff?: string;
+  /** Planned departure of the way back. */
+  returnTime?: string;
+  /** Free text hints for passengers. */
+  notes: string;
+  cancelledAt?: string;
+  cancelReason?: string;
 }
 
 export type BookingStatus = 'interested' | 'confirmed' | 'waitlist';
@@ -40,7 +48,7 @@ export interface Booking {
   queuedAt?: string;
 }
 
-export type TripPhase = 'interest' | 'open' | 'closed';
+export type TripPhase = 'interest' | 'open' | 'closed' | 'cancelled';
 
 export interface NewsPost {
   id: string;
@@ -64,6 +72,8 @@ export interface Settings {
   defaultSeats: number;
   defaultPrice: number;
   defaultMeetingPoint: string;
+  /** Confirmed seats can only be cancelled up to this many hours before departure (0 = until departure). */
+  cancelDeadlineHours: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -74,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultSeats: 50,
   defaultPrice: 30,
   defaultMeetingPoint: 'Parkplatz Stadion',
+  cancelDeadlineHours: 0,
 };
 
 export interface Snapshot {

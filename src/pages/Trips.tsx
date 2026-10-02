@@ -17,7 +17,10 @@ function TripCard({ trip }: { trip: Trip }) {
 
   let info: string;
   let value: number;
-  if (phase === 'interest') {
+  if (phase === 'cancelled') {
+    info = trip.cancelReason ? `Abgesagt: ${trip.cancelReason}` : 'Diese Fahrt wurde abgesagt.';
+    value = confirmed;
+  } else if (phase === 'interest') {
     info = `${interested} Interessenten · ${trip.seats} Plätze`;
     value = interested;
   } else if (free === 0 && phase === 'open') {
@@ -29,7 +32,7 @@ function TripCard({ trip }: { trip: Trip }) {
   }
 
   return (
-    <Link to={`/trip/${trip.id}`} className={`card trip${phase === 'interest' ? ' hot' : ''}${phase === 'closed' ? ' past' : ''}`}>
+    <Link to={`/trip/${trip.id}`} className={`card trip${phase === 'interest' ? ' hot' : ''}${phase === 'closed' || phase === 'cancelled' ? ' past' : ''}`}>
       <div className="row between">
         <PhaseBadge phase={phase} />
         {mine && <StatusBadge status={mine.status} />}
@@ -45,9 +48,9 @@ function TripCard({ trip }: { trip: Trip }) {
 export function Trips() {
   const { snap, now } = useApp();
   if (!snap) return null;
-  const upcoming = snap.trips.filter((t) => getTripPhase(t, now) !== 'closed').sort((a, b) => a.departure.localeCompare(b.departure));
+  const upcoming = snap.trips.filter((t) => Date.parse(t.departure) > now).sort((a, b) => a.departure.localeCompare(b.departure));
   const latestNews = sortNews(snap.news)[0];
-  const past = snap.trips.filter((t) => getTripPhase(t, now) === 'closed').sort((a, b) => b.departure.localeCompare(a.departure));
+  const past = snap.trips.filter((t) => Date.parse(t.departure) <= now).sort((a, b) => b.departure.localeCompare(a.departure));
   return (
     <>
       <h1 className="title">Bus<span className="accent-text">fahrten</span></h1>

@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type Snapshot, type Trip, type User } from '../domain/types';
-import { allocateAll, allocateTrip, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
+import { allocateAll, allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
 
@@ -12,7 +12,7 @@ const uid = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.ra
 function migrate(raw: Partial<Snapshot>): Snapshot {
   return {
     users: raw.users ?? [],
-    trips: raw.trips ?? [],
+    trips: (raw.trips ?? []).map((t) => ({ ...t, notes: t.notes ?? '' })),
     bookings: raw.bookings ?? [],
     news: raw.news ?? [],
     settings: { ...DEFAULT_SETTINGS, ...raw.settings },
@@ -106,7 +106,7 @@ export class LocalStorageService implements DataService {
       if (Number.isNaN(Date.parse(input.departure))) return 'Bitte eine gültige Abfahrtszeit angeben.';
       if (id === null) {
         const createdAt = new Date(now).toISOString();
-        const trip: Trip = { id: uid(), ...input, createdAt, interestEndsAt: interestEndFor(createdAt, s.settings.interestDays) };
+        const trip: Trip = { id: uid(), ...input, notes: input.notes ?? '', createdAt, interestEndsAt: interestEndFor(createdAt, s.settings.interestDays) };
         return { ...s, trips: [trip, ...s.trips] };
       }
       const existing = s.trips.find((t) => t.id === id);
@@ -116,6 +116,14 @@ export class LocalStorageService implements DataService {
       return { ...s, trips, bookings: promoteWaitlist(s.bookings, updated) };
     });
 
+  cancelTrip: DataService['cancelTrip'] = (tripId, reason) =>
+    this.mutate((s, now) => {
+      const trip = s.trips.find((t) => t.id === tripId);
+      if (!trip || trip.cancelledAt) return 'Fahrt nicht gefunden oder schon abgesagt.';
+      const cancelled = { ...trip, cancelledAt: new Date(now).toISOString(), cancelReason: reason.trim() || undefined };
+      return { ...s, trips: s.trips.map((t) => (t.id === tripId ? cancelled : t)) };
+    });
+
   deleteTrip: DataService['deleteTrip'] = (id) =>
     this.mutate((s) => ({ ...s, trips: s.trips.filter((t) => t.id !== id), bookings: s.bookings.filter((b) => b.tripId !== id) }));
 
@@ -123,6 +131,7 @@ export class LocalStorageService implements DataService {
     this.mutate((s, now) => {
       const trip = s.trips.find((t) => t.id === tripId);
       if (!trip) return 'Fahrt nicht gefunden.';
+      if (trip.cancelledAt) return 'Die Fahrt wurde abgesagt.';
       if (getTripPhase(trip, now) !== 'interest') return 'Die Interessensphase ist schon vorbei.';
       const trips = s.trips.map((t) => (t.id === tripId ? { ...t, interestEndsAt: new Date(now).toISOString() } : t));
       return allocateTrip({ ...s, trips }, tripId, now);
@@ -142,7 +151,8 @@ export class LocalStorageService implements DataService {
       const trip = s.trips.find((t) => t.id === tripId);
       const mine = s.bookings.find((b) => b.tripId === tripId && b.userId === userId);
       if (!trip || !mine) return 'Keine Buchung gefunden.';
-      if (getTripPhase(trip, now) === 'closed') return 'Die Fahrt ist bereits abgefahren.';
+      const blocked = cancelBlockedReason(mine, trip, s.settings, now);
+      if (blocked) return blocked;
       const rest = s.bookings.filter((b) => b.id !== mine.id);
       return { ...s, bookings: promoteWaitlist(rest, trip) };
     });

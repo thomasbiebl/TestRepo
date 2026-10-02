@@ -37,16 +37,18 @@ export async function buildSeed(now = Date.now()): Promise<Snapshot> {
   const trips: Trip[] = [
     {
       id: 'augsburg', title: 'Augsburg (A)', departure: iso(now + 12 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 28, seats: 4, createdAt: iso(now - (3 * DAY - 30 * HOUR)),
+      price: 28, seats: 4, notes: 'Bitte 15 Minuten vor Abfahrt am Bus sein. Getränke bitte selbst mitbringen.',
+      kickoff: iso(now + 12 * DAY + 5 * HOUR), returnTime: iso(now + 12 * DAY + 14 * HOUR),
+      createdAt: iso(now - (3 * DAY - 30 * HOUR)),
       interestEndsAt: interestEndFor(iso(now - (3 * DAY - 30 * HOUR))),
     },
     {
       id: 'leipzig', title: 'Leipzig (A)', departure: iso(now + 30 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 45, seats: 6, createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
+      price: 45, seats: 6, notes: '', createdAt: iso(now - 5 * DAY), interestEndsAt: iso(now - 2 * DAY), allocatedAt: iso(now - 2 * DAY),
     },
     {
       id: 'dortmund', title: 'Dortmund (A)', departure: iso(now + 45 * DAY), meetingPoint: 'Parkplatz Stadion',
-      price: 38, seats: 3, createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
+      price: 38, seats: 3, notes: '', createdAt: iso(now - 8 * DAY), interestEndsAt: iso(now - 5 * DAY), allocatedAt: iso(now - 5 * DAY),
     },
   ];
 

@@ -5,7 +5,7 @@ import { useApp } from '../state/AppContext';
 export function AdminHome() {
   const { snap, now, data, act } = useApp();
   if (!snap) return null;
-  const active = snap.trips.filter((t) => getTripPhase(t, now) !== 'closed').length;
+  const active = snap.trips.filter((t) => ['interest', 'open'].includes(getTripPhase(t, now))).length;
   const members = snap.users.filter((u) => u.isMember).length;
   const requests = snap.users.filter((u) => u.memberRequested).length;
   const waiting = snap.bookings.filter((b) => b.status === 'waitlist').length;

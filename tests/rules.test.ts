@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildMyExport } from '../src/domain/exports';
+import { buildIcs } from '../src/domain/ics';
 import {
-  allocateTrip, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
+  allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, pastTripCount, promoteWaitlist, validateSettings, waitlistOf,
 } from '../src/domain/rules';
 import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
@@ -14,7 +15,7 @@ const user = (id: string, o: Partial<User> = {}): User => ({
   memberRequested: false, baseTrips: 0, createdAt: iso(T0), ...o,
 });
 const trip = (o: Partial<Trip> = {}): Trip => ({
-  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2,
+  id: 't1', title: 'Augsburg', departure: iso(T0 + 14 * DAY), meetingPoint: 'P', price: 20, seats: 2, notes: '',
   createdAt: iso(T0), interestEndsAt: interestEndFor(iso(T0)), ...o,
 });
 const booking = (userId: string, status: Booking['status'], at = 0, tripId = 't1'): Booking => ({
@@ -143,5 +144,46 @@ describe('data export', () => {
     expect(out.bookings).toHaveLength(1);
     expect(out.bookings[0]).toMatchObject({ trip: 'Augsburg', status: 'confirmed' });
     expect(JSON.stringify(out)).not.toContain('passwordHash');
+  });
+});
+
+describe('cancelled trips and cancellation deadline', () => {
+  const cancelled = trip({ cancelledAt: iso(T0 + DAY), cancelReason: 'Schnee' });
+
+  it('reports the cancelled phase, refuses bookings and allocation', () => {
+    expect(getTripPhase(cancelled, T0 + 2 * DAY)).toBe('cancelled');
+    const m = user('m');
+    const s = snap([m], [cancelled], [booking('m', 'interested')]);
+    const r = createBooking(s, cancelled, m, T0 + 4 * DAY, 'x');
+    expect(r.ok).toBe(false);
+    expect(allocateTrip(s, 't1', T0 + 4 * DAY)).toBe(s);
+  });
+
+  it('binds confirmed seats to the deadline, but never interest or waiting list entries', () => {
+    const t = trip();
+    const settings = { ...DEFAULT_SETTINGS, cancelDeadlineHours: 48 };
+    const dep = Date.parse(t.departure);
+    expect(cancelBlockedReason(booking('a', 'confirmed'), t, settings, dep - 49 * 3_600_000)).toBeNull();
+    expect(cancelBlockedReason(booking('a', 'confirmed'), t, settings, dep - 47 * 3_600_000)).toMatch(/48 Stunden/);
+    expect(cancelBlockedReason(booking('a', 'waitlist'), t, settings, dep - 1 * 3_600_000)).toBeNull();
+    expect(cancelBlockedReason(booking('a', 'confirmed'), t, DEFAULT_SETTINGS, dep - 1)).toBeNull();
+    expect(cancelBlockedReason(booking('a', 'confirmed'), t, DEFAULT_SETTINGS, dep + 1)).toMatch(/abgefahren/);
+  });
+
+  it('validates the deadline setting', () => {
+    expect(validateSettings({ ...DEFAULT_SETTINGS, cancelDeadlineHours: 721 })).not.toBeNull();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, cancelDeadlineHours: 24 })).toBeNull();
+  });
+});
+
+describe('calendar export', () => {
+  it('builds a valid event with escaped text and CRLF lines', () => {
+    const ics = buildIcs(trip({ title: 'Augsburg, (A)', notes: 'Treffpunkt; pünktlich\nGetränke mit', kickoff: iso(T0 + 14 * DAY + 5 * 3_600_000) }), new Date(T0));
+    expect(ics.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true);
+    expect(ics).toContain('DTSTART:20261115T100000Z');
+    expect(ics).toContain('SUMMARY:Busfahrt: Augsburg\\, (A)');
+    expect(ics.replace(/\r\n /g, '')).toContain('Treffpunkt\\; pünktlich\\nGetränke mit');
+    expect(ics.split('\r\n').every((l) => l.length <= 75)).toBe(true);
+    expect(ics.trimEnd().endsWith('END:VCALENDAR')).toBe(true);
   });
 });

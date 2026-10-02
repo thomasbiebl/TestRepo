@@ -1,6 +1,8 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { Badge, Countdown, PhaseBadge, SeatBar, StatusBadge, fmtDate, fmtPrice, shortName } from '../components/ui';
-import { byTrip, confirmedCount, freeSeats, getTripPhase, pastTripCount, rankInterested, waitlistOf } from '../domain/rules';
+import { buildIcs } from '../domain/ics';
+import { byTrip, cancelBlockedReason, confirmedCount, freeSeats, getTripPhase, pastTripCount, rankInterested, waitlistOf } from '../domain/rules';
+import { downloadFile } from '../lib/download';
 import { useApp } from '../state/AppContext';
 
 export function TripDetail() {
@@ -21,6 +23,7 @@ export function TripDetail() {
   const { guestsMayBook, waitlistEnabled } = snap.settings;
   const mayTry = phase === 'open' ? user.isMember || guestsMayBook : user.isMember;
   const soldOut = phase === 'open' && free === 0 && !waitlistEnabled;
+  const cancelBlock = mine ? cancelBlockedReason(mine, trip, snap.settings, now) : null;
   const waitPos = mine?.status === 'waitlist' ? waitlist.findIndex((b) => b.id === mine.id) + 1 : 0;
 
   const book = () => act(() => data.book(trip.id, user.id), phase === 'interest' ? 'Interesse bekundet.' : undefined);
@@ -48,6 +51,9 @@ export function TripDetail() {
             </>
           )}
           {phase === 'closed' && <p className="muted">Diese Fahrt ist abgefahren. {confirmed} Mitfahrer.</p>}
+          {phase === 'cancelled' && (
+            <p className="muted"><b>Diese Fahrt wurde abgesagt.</b>{trip.cancelReason ? ` ${trip.cancelReason}` : ''}</p>
+          )}
         </section>
 
         {mine && (
@@ -86,9 +92,17 @@ export function TripDetail() {
           <dl className="kv">
             <dt>Abfahrt</dt><dd>{fmtDate(trip.departure)}</dd>
             <dt>Treffpunkt</dt><dd>{trip.meetingPoint}</dd>
+            {trip.kickoff && <><dt>Anstoß</dt><dd>{fmtDate(trip.kickoff)}</dd></>}
+            {trip.returnTime && <><dt>Rückfahrt</dt><dd>{fmtDate(trip.returnTime)}</dd></>}
             <dt>Preis</dt><dd>{fmtPrice(trip.price)} pro Person</dd>
             <dt>Plätze</dt><dd>{trip.seats}</dd>
           </dl>
+          {trip.notes && <p className="prose">{trip.notes}</p>}
+          {phase !== 'cancelled' && (
+            <button className="chip" onClick={() => downloadFile(`busfahrt-${trip.title.replace(/\W+/g, '-').toLowerCase()}.ics`, buildIcs(trip), 'text/calendar;charset=utf-8')}>
+              Zum Kalender hinzufügen
+            </button>
+          )}
         </section>
 
         {phase === 'interest' && !user.isMember && !mine && (
@@ -103,11 +117,11 @@ export function TripDetail() {
         )}
         {soldOut && !mine && <p className="notice">Diese Fahrt ist ausgebucht.</p>}
 
-        {phase !== 'closed' && !mine && mayTry && !soldOut && (
+        {phase !== 'closed' && phase !== 'cancelled' && !mine && mayTry && !soldOut && (
           <button className="btn" onClick={book}>{mainLabel}</button>
         )}
-        {phase !== 'closed' && mine && (
-          <button className="btn ghost" onClick={cancel}>{cancelLabel}</button>
+        {phase !== 'closed' && phase !== 'cancelled' && mine && (
+          cancelBlock ? <p className="notice">{cancelBlock}</p> : <button className="btn ghost" onClick={cancel}>{cancelLabel}</button>
         )}
       </div>
     </>

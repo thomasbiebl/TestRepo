@@ -14,6 +14,7 @@ export function Badge({ tone = 'gray', children }: { tone?: 'red' | 'blue' | 'gr
 export function PhaseBadge({ phase }: { phase: TripPhase }) {
   if (phase === 'interest') return <Badge tone="red">Interesse · Mitglieder</Badge>;
   if (phase === 'open') return <Badge tone="blue">Offene Buchung</Badge>;
+  if (phase === 'cancelled') return <Badge tone="red">Abgesagt</Badge>;
   return <Badge>Abgefahren</Badge>;
 }
 

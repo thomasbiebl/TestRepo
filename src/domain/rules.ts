@@ -6,6 +6,7 @@ export const interestEndFor = (createdAt: string, days: number = DEFAULT_SETTING
   new Date(Date.parse(createdAt) + days * DAY_MS).toISOString();
 
 export function getTripPhase(trip: Trip, now: number): TripPhase {
+  if (trip.cancelledAt) return 'cancelled';
   if (now >= Date.parse(trip.departure)) return 'closed';
   if (now < Date.parse(trip.interestEndsAt)) return 'interest';
   return 'open';
@@ -51,7 +52,7 @@ export const waitlistOf = (bookings: Booking[], tripId: string) =>
  */
 export function allocateTrip(snap: Snapshot, tripId: string, now: number): Snapshot {
   const trip = snap.trips.find((t) => t.id === tripId);
-  if (!trip || trip.allocatedAt || now < Date.parse(trip.interestEndsAt)) return snap;
+  if (!trip || trip.cancelledAt || trip.allocatedAt || now < Date.parse(trip.interestEndsAt)) return snap;
 
   const ranked = rankInterested(trip, snap, now);
   const stamp = new Date(now).getTime();
@@ -97,6 +98,8 @@ export function createBooking(
   }
   const nowIso = new Date(now).toISOString();
   switch (getTripPhase(trip, now)) {
+    case 'cancelled':
+      return { ok: false, error: 'Die Fahrt wurde abgesagt.' };
     case 'closed':
       return { ok: false, error: 'Die Fahrt ist bereits abgefahren.' };
     case 'interest':
@@ -135,7 +138,22 @@ export function validateSettings(s: Settings): string | null {
     return 'Der Vorlauf für Mitglieder muss zwischen 0 und 30 Tagen liegen.';
   }
   if (!Number.isInteger(s.defaultSeats) || s.defaultSeats < 1) return 'Mindestens ein Platz als Standard.';
+  if (!Number.isInteger(s.cancelDeadlineHours) || s.cancelDeadlineHours < 0 || s.cancelDeadlineHours > 720) {
+    return 'Die Stornofrist muss zwischen 0 und 720 Stunden liegen.';
+  }
   if (!(s.defaultPrice >= 0)) return 'Der Standardpreis darf nicht negativ sein.';
   if (!s.defaultMeetingPoint.trim()) return 'Bitte einen Standard-Treffpunkt angeben.';
   return null;
+}
+
+/**
+ * Tells why a booking cannot be cancelled (null = it can). Interest and waiting list entries
+ * can always be withdrawn; confirmed seats are bound by the cancellation deadline.
+ */
+export function cancelBlockedReason(booking: Booking, trip: Trip, settings: Settings, now: number): string | null {
+  if (getTripPhase(trip, now) === 'closed') return 'Die Fahrt ist bereits abgefahren.';
+  if (booking.status !== 'confirmed' || settings.cancelDeadlineHours <= 0) return null;
+  const deadline = Date.parse(trip.departure) - settings.cancelDeadlineHours * 3_600_000;
+  if (now < deadline) return null;
+  return `Stornieren ist nur bis ${settings.cancelDeadlineHours} Stunden vor der Abfahrt möglich. Bitte melde dich beim Admin.`;
 }

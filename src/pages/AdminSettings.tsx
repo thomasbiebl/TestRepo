@@ -3,12 +3,13 @@ import { validateSettings } from '../domain/rules';
 import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
-type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint', string> &
+type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours', string> &
   Pick<Settings, 'guestsMayBook' | 'waitlistEnabled'>;
 
 const toDraft = (s: Settings): Draft => ({
   clubName: s.clubName,
   interestDays: String(s.interestDays),
+  cancelDeadlineHours: String(s.cancelDeadlineHours),
   defaultSeats: String(s.defaultSeats),
   defaultPrice: String(s.defaultPrice),
   defaultMeetingPoint: s.defaultMeetingPoint,
@@ -19,6 +20,7 @@ const toDraft = (s: Settings): Draft => ({
 const fromDraft = (d: Draft): Settings => ({
   clubName: d.clubName,
   interestDays: Number(d.interestDays),
+  cancelDeadlineHours: Number(d.cancelDeadlineHours),
   defaultSeats: Number(d.defaultSeats),
   defaultPrice: Number(d.defaultPrice),
   defaultMeetingPoint: d.defaultMeetingPoint,
@@ -62,6 +64,9 @@ export function AdminSettings() {
             <input id="s-guests" type="checkbox" checked={d.guestsMayBook} onChange={(e) => setDraft({ ...d, guestsMayBook: e.target.checked })} />
             Nicht-Mitglieder dürfen nach der Vergabe freie Plätze buchen
           </label>
+          <label htmlFor="s-cancel">Stornofrist für bestätigte Plätze (Stunden vor Abfahrt)</label>
+          <input id="s-cancel" type="number" inputMode="numeric" min={0} max={720} step={1} required value={d.cancelDeadlineHours} onChange={set('cancelDeadlineHours')} />
+          <p className="muted">0 heißt: stornieren ist bis zur Abfahrt möglich. Interesse und Wartelistenplätze lassen sich immer zurückziehen.</p>
           <label className="check" htmlFor="s-wait">
             <input id="s-wait" type="checkbox" checked={d.waitlistEnabled} onChange={(e) => setDraft({ ...d, waitlistEnabled: e.target.checked })} />
             Warteliste bei ausgebuchten Fahrten
