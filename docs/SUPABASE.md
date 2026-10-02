@@ -25,7 +25,13 @@ Unter *Authentication*:
 - **Sign In / Providers → Email:** E-Mail-Anmeldung aktiv lassen. „Confirm email“ ist empfehlenswert, damit sich niemand mit fremden Adressen registriert.
 - **E-Mail-Versand:** Der eingebaute Versand ist stark begrenzt (nur wenige Mails pro Stunde). Richte deshalb unter *Project Settings → Authentication → SMTP Settings* einen eigenen Anbieter ein, z. B. Brevo oder Resend mit kostenlosem Tarif und eigener Absenderadresse.
 
-Später können hier auch Google, Apple oder Facebook als Anmeldung ergänzt werden (OpenID Connect).
+**Anmeldung mit Google, Apple oder Facebook (optional):**
+
+1. Beim Anbieter eine App bzw. einen OAuth-Client anlegen. Als Weiterleitungs-Adresse trägst du die *Callback URL* ein, die Supabase unter *Authentication → Sign In / Providers → (Anbieter)* anzeigt. Sie sieht so aus: `https://DEIN-PROJEKT.supabase.co/auth/v1/callback`.
+2. Die Zugangsdaten (Client ID und Secret) in Supabase beim Anbieter eintragen und ihn einschalten.
+3. In GitHub unter *Settings → Secrets and variables → Actions → Variables* die Variable `OAUTH_PROVIDERS` anlegen, zum Beispiel `google,apple`, und neu deployen. Auf der Login- und Registrierungsseite erscheinen dann die Buttons.
+
+Das Profil entsteht beim ersten Login automatisch, der Name kommt vom Anbieter. Die Mitgliederliste greift über die E-Mail-Adresse des Kontos. Apple verlangt ein kostenpflichtiges Entwicklerkonto, Google und Facebook sind kostenlos. Die Buttons sind nicht mit einem echten Anbieter getestet, nur der Aufruf an Supabase ist es.
 
 ## 4. App mit Supabase verbinden
 

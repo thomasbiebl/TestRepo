@@ -17,14 +17,26 @@ Als „bisherige Fahrten“ zählen bestätigte Plätze auf abgefahrenen Fahrten
 
 ## Funktionen
 
-- Registrierung und Anmeldung mit E-Mail und Passwort, Passwort zurücksetzen per E-Mail (nur mit Supabase)
-- Mitgliederverwaltung: Registrierte können eine Mitgliedschaft anfragen, Admins bestätigen
+**Für Mitglieder und Gäste**
+- Registrierung und Anmeldung mit E-Mail und Passwort, Passwort zurücksetzen, optional Google, Apple, Facebook (nur mit Supabase)
 - Fahrten ansehen, Interesse bekunden, buchen, stornieren, Wartelistenplatz sehen
-- Admin-Bereich: Fahrten anlegen, bearbeiten, löschen, Teilnehmer ansehen, Benutzer verwalten
-- News: Admins veröffentlichen Neuigkeiten (auch angepinnt), ein roter Punkt am Tab zeigt ungelesene News
-- Einstellungen (Admin): Vorlauf für Mitglieder in Tagen, Gäste dürfen buchen ja/nein, Warteliste ja/nein, Vorgaben für neue Fahrten (Plätze, Preis, Treffpunkt), Vereinsname. Der Vorlauf gilt für neu angelegte Fahrten, bestehende behalten ihre Frist.
-- Wechselbare Designs (Profil → Design): „Stadion-Nacht“ und „Klassisch“
+- Begleitpersonen mitbringen, Zustiegsstelle wählen, Fahrpreis und Zahlungsstatus sehen
+- Mitteilungen in der App (Glocke) und optional per E-Mail: Platz vergeben, nachgerückt, Fahrt abgesagt, neue Fahrt, News
+- News lesen, Abfahrt in den Kalender übernehmen
+- Profil: Name und Passwort ändern, Mitgliedscode einlösen, Daten herunterladen, Konto löschen, Design wählen (Stadion-Nacht, Klassisch, Clean, Ticket)
+
+**Für Admins**
+- Fahrten anlegen, bearbeiten, absagen, löschen (Anstoß, Rückfahrt, Hinweise, Zustiegsstellen, mehrere Busse, Punkte)
+- Teilnehmerliste je Fahrt mit Kasse (erwartet, bezahlt, offen), „bezahlt“ und „eingestiegen / nicht erschienen“ abhaken, Bus zuordnen, CSV-Export und Druckansicht
+- Benutzer verwalten, Mitgliederliste per CSV importieren, Mitgliedscode festlegen
+- News veröffentlichen und anpinnen
+- Einstellungen: Vorlauf für Mitglieder, Gäste dürfen buchen, Warteliste, Stornofrist, Begleitpersonen, Abzug bei Nichterscheinen, Vorgaben für neue Fahrten, Vereinsname
+- Änderungsprotokoll: wer hat wann was geändert
 - Installierbar als PWA („Zum Startbildschirm hinzufügen“), läuft offline
+
+**Rangfolge bei der Platzvergabe:** Punkte = Startwert + Punkte der Fahrten, an denen man teilgenommen hat, minus Abzug für Nichterscheinen (einstellbar). Eine Fahrt zählt in der Regel 1 Punkt, Admins können weite Fahrten höher gewichten. Eine Buchung mit Begleitpersonen belegt entsprechend viele Plätze. Passt eine Gruppe nicht mehr in den Bus, kommt sie auf die Warteliste, und die nächsten Interessenten werden weiter geprüft.
+
+Nicht enthalten: Push-Nachrichten aufs Handy (Web Push) und Online-Bezahlung. Der Zahlungsstatus wird von Hand geführt.
 
 ### Demo-Zugänge
 
@@ -56,10 +68,11 @@ Einmalig einrichten: *Settings → Pages → Source: GitHub Actions*. Für Branc
 
 ## Aufbau
 
-- `src/domain/` – Regeln (Phasen, Vergabe, Warteliste), reine Funktionen mit Tests in `tests/`
+- `src/domain/` – Regeln (Phasen, Vergabe, Warteliste, Punkte, Mitteilungen, Protokoll), reine Funktionen mit Tests in `tests/`
 - `src/data/DataService.ts` – Schnittstelle zum Speicher, `localStorageService.ts` ist die Demo-Umsetzung
 - `src/auth/AuthService.ts` – Schnittstelle zur Anmeldung, `localAuth.ts` ist die Demo-Umsetzung
 - `src/themes/` – Designs als CSS-Variablen. Neues Design: CSS-Datei mit `:root[data-theme='<id>']` anlegen, in `main.tsx` importieren und in `themes/index.ts` eintragen
+- `supabase/migrations/` – Datenbank (Tabellen, Zugriffsregeln, Vergabe), `supabase/functions/` – E-Mail-Versand
 - `mockups/` – statische Design-Entwürfe
 
 ## Datenbank und Anmeldung (Supabase)

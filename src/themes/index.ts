@@ -15,6 +15,8 @@ export interface ThemeInfo {
 export const THEMES: ThemeInfo[] = [
   { id: 'nacht', label: 'Stadion-Nacht', description: 'Dunkel mit roten Highlights', barColor: '#0B1D3A', swatches: ['#0B1D3A', '#13294d', '#DC052D'] },
   { id: 'klassisch', label: 'Klassisch', description: 'Hell mit rotem Header', barColor: '#DC052D', swatches: ['#F2F4F7', '#ffffff', '#DC052D'] },
+  { id: 'clean', label: 'Clean', description: 'Viel Weiß, Rot als Akzent', barColor: '#FFFFFF', swatches: ['#ffffff', '#f4f6f9', '#DC052D'] },
+  { id: 'ticket', label: 'Ticket', description: 'Fahrten als Tickets, Rot-Blau-Verlauf', barColor: '#DC052D', swatches: ['#DC052D', '#0066B2', '#eef1f6'] },
 ];
 
 export const DEFAULT_THEME = 'nacht';

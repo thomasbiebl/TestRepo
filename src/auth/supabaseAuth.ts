@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { oauthProviders, type OAuthProvider } from '../config';
 import type { Result } from '../data/DataService';
 import type { AuthService } from './AuthService';
 
@@ -14,6 +15,7 @@ const appUrl = () => `${window.location.origin}${import.meta.env.BASE_URL}`;
 
 export class SupabaseAuth implements AuthService {
   readonly isDemo = false;
+  readonly oauthProviders = oauthProviders;
   private uid: string | null = null;
   private recovery = new Set<() => void>();
 
@@ -56,6 +58,11 @@ export class SupabaseAuth implements AuthService {
   logout() {
     this.uid = null;
     void this.sb.auth.signOut();
+  }
+
+  async loginWithProvider(provider: OAuthProvider): Promise<Result> {
+    const { error } = await this.sb.auth.signInWithOAuth({ provider, options: { redirectTo: appUrl() } });
+    return error ? { ok: false, error: german(error.message) } : { ok: true };
   }
 
   async resetPassword(email: string): Promise<Result> {

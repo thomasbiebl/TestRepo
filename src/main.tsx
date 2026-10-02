@@ -7,6 +7,8 @@ import { AppProvider } from './state/AppContext';
 import { ThemeProvider } from './themes/ThemeProvider';
 import './themes/nacht.css';
 import './themes/klassisch.css';
+import './themes/clean.css';
+import './themes/ticket.css';
 import './styles.css';
 
 registerSW({ immediate: true });

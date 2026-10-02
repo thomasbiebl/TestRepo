@@ -3,6 +3,26 @@ import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, ADMIN_PASSWORD, DEMO_PASSWORD } from '../data/seed';
 import { useApp } from '../state/AppContext';
 
+const PROVIDER_LABEL = { google: 'Google', apple: 'Apple', facebook: 'Facebook' } as const;
+
+function SocialButtons({ onError }: { onError: (message: string) => void }) {
+  const { auth } = useApp();
+  if (!auth.oauthProviders?.length || !auth.loginWithProvider) return null;
+  return (
+    <div className="social">
+      {auth.oauthProviders.map((p) => (
+        <button key={p} type="button" className="btn ghost" onClick={async () => {
+          const res = await auth.loginWithProvider?.(p);
+          if (res && !res.ok) onError(res.error);
+        }}>
+          Weiter mit {PROVIDER_LABEL[p]}
+        </button>
+      ))}
+      <p className="muted center">oder mit E-Mail</p>
+    </div>
+  );
+}
+
 function AuthFrame({ title, children }: { title: string; children: React.ReactNode }) {
   const { snap } = useApp();
   return (
@@ -48,6 +68,7 @@ export function Login() {
 
   return (
     <AuthFrame title="Anmelden">
+      <SocialButtons onError={setError} />
       <form onSubmit={submit} className="form">
         <label htmlFor="email">E-Mail</label>
         <input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -108,6 +129,7 @@ export function Register() {
 
   return (
     <AuthFrame title="Registrieren">
+      <SocialButtons onError={setError} />
       <form onSubmit={submit} className="form">
         <label htmlFor="name">Name</label>
         <input id="name" autoComplete="name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
