@@ -58,7 +58,7 @@ npm run build      # Typecheck + Produktions-Build nach dist/
 npm run preview    # gebauten Stand ansehen
 ```
 
-Die App ist für den Pfad `/TestRepo/` gebaut. Für einen anderen Pfad: `BASE_PATH=/ npm run build`.
+Lokal läuft die App unter `/`. Das Deployment baut sie automatisch für den Pfad `/<Repo-Name>/` (Variable `BASE_PATH`), den Namen des Repos kannst du also jederzeit ändern. Für einen eigenen Pfad: `BASE_PATH=/mein-pfad/ npm run build`.
 
 ## Deployment (kostenlos)
 

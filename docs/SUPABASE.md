@@ -21,7 +21,7 @@ Spätere Änderungen am Schema kommen als neue Dateien (`0002_….sql`) in `supa
 
 Unter *Authentication*:
 
-- **URL Configuration:** *Site URL* auf die Adresse der App setzen, z. B. `https://thomasbiebl.github.io/TestRepo/`. Bei *Redirect URLs* dieselbe Adresse eintragen, für lokale Tests zusätzlich `http://localhost:5173/TestRepo/`. Ohne das funktionieren die Links in Bestätigungs- und Passwort-Mails nicht.
+- **URL Configuration:** *Site URL* auf die Adresse der App setzen, z. B. `https://thomasbiebl.github.io/Fanclub-App/`. Bei *Redirect URLs* dieselbe Adresse eintragen, für lokale Tests zusätzlich `http://localhost:5173/`. Ohne das funktionieren die Links in Bestätigungs- und Passwort-Mails nicht.
 - **Sign In / Providers → Email:** E-Mail-Anmeldung aktiv lassen. „Confirm email“ ist empfehlenswert, damit sich niemand mit fremden Adressen registriert.
 - **E-Mail-Versand:** Der eingebaute Versand ist stark begrenzt (nur wenige Mails pro Stunde). Richte deshalb unter *Project Settings → Authentication → SMTP Settings* einen eigenen Anbieter ein, z. B. Brevo oder Resend mit kostenlosem Tarif und eigener Absenderadresse.
 
@@ -85,7 +85,7 @@ Einrichtung (am einfachsten mit der Supabase CLI auf deinem Rechner, `npm i -g s
    supabase link --project-ref DEIN-PROJEKT
    supabase functions deploy notify-email --no-verify-jwt
    supabase secrets set BREVO_API_KEY=... MAIL_FROM=info@dein-verein.de MAIL_FROM_NAME="Dein Fanclub" \
-     APP_URL=https://thomasbiebl.github.io/TestRepo/ WEBHOOK_SECRET=ein-langes-zufaelliges-passwort
+     APP_URL=https://thomasbiebl.github.io/Fanclub-App/ WEBHOOK_SECRET=ein-langes-zufaelliges-passwort
    ```
 3. In Supabase unter *Database → Webhooks* einen Webhook anlegen: Tabelle `notifications`, Ereignis `Insert`, Typ *Supabase Edge Functions*, Function `notify-email`, zusätzlicher HTTP-Header `x-webhook-secret` mit demselben Wert wie `WEBHOOK_SECRET`.
 4. Testen: eine Fahrt absagen, für die du gebucht hast. Die Mail kommt kurz danach. Fehler siehst du unter *Edge Functions → notify-email → Logs*.
@@ -93,6 +93,16 @@ Einrichtung (am einfachsten mit der Supabase CLI auf deinem Rechner, `npm i -g s
 Die Function ist nicht automatisch getestet. Nur der Aufbau der Mails ist es (`tests/notifyEmail.test.ts`). Prüfe sie deshalb einmal selbst.
 
 Push-Nachrichten aufs Handy (Web Push) sind nicht eingebaut. Sie brauchen zusätzliche Schlüssel und einen weiteren Dienst, und auf dem iPhone funktionieren sie nur, wenn die App auf dem Startbildschirm liegt.
+
+## Repo umbenennen
+
+Das Repo lässt sich jederzeit umbenennen (GitHub: *Settings → General → Repository name*, ohne Leerzeichen, z. B. `Fanclub-App`). Danach:
+
+1. Der Pages-Deploy baut die App automatisch mit dem neuen Pfad. Im *Actions*-Tab prüfen, sonst *Run workflow*.
+2. Die Adresse der App ändert sich auf `https://thomasbiebl.github.io/NEUER-NAME/`. Die alte leitet nicht weiter.
+3. In Supabase unter *Authentication → URL Configuration* *Site URL* und *Redirect URLs* auf die neue Adresse umstellen, sonst funktionieren Bestätigungs-, Passwort- und Social-Login-Links nicht mehr.
+4. Bei aktiven E-Mail-Benachrichtigungen das Secret `APP_URL` der Edge Function neu setzen (`supabase secrets set APP_URL=…`).
+5. Auf dem Handy die App neu zum Startbildschirm hinzufügen. Variablen und Secrets in GitHub bleiben erhalten.
 
 ## So ist der Zugriff geschützt
 
