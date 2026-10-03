@@ -25,7 +25,9 @@ export function NewsCard({ post }: { post: NewsPost }) {
 export function News() {
   const { snap, user } = useApp();
   const { markSeen } = useNewsSeen(user?.id, snap?.news);
-  useEffect(markSeen, [markSeen]);
+  useEffect(() => {
+    markSeen();
+  }, [markSeen]);
   if (!snap) return null;
   const posts = sortNews(snap.news);
   return (
