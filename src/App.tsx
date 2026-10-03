@@ -34,7 +34,10 @@ function RequireAdmin() {
 export function App() {
   const { toast, snap, auth } = useApp();
   const nav = useNavigate();
-  useEffect(() => auth.onPasswordRecovery?.(() => nav('/reset-password', { replace: true })), [auth, nav]);
+  useEffect(() => {
+    const stop = auth.onPasswordRecovery?.(() => nav('/reset-password', { replace: true }));
+    return typeof stop === 'function' ? stop : undefined;
+  }, [auth, nav]);
   const clubName = snap?.settings.clubName;
   useEffect(() => {
     document.title = clubName ? `${clubName} Busfahrten` : 'Busfahrten';

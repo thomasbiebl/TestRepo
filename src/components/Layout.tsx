@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { scrollToTop } from '../lib/scroll';
 import { useApp } from '../state/AppContext';
 import { useNewsSeen } from '../state/newsSeen';
 
@@ -8,7 +9,9 @@ export function Layout() {
   const { hasUnread } = useNewsSeen(user?.id, snap?.news);
   const { pathname } = useLocation();
   const nav = useNavigate();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  useEffect(() => {
+    scrollToTop();
+  }, [pathname]);
   const tabs = [
     { to: '/', label: 'Fahrten', icon: '🚌', end: true },
     { to: '/news', label: 'News', icon: '📰', dot: hasUnread },
