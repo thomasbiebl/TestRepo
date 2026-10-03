@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS, type Snapshot, type Trip, type User } from '../domain/types';
 import { deriveAudit } from '../domain/audit';
 import { deriveNotifications } from '../domain/notifications';
-import { allocateAll, allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
+import { adminCancelBlockedReason, allocateAll, allocateTrip, cancelBlockedReason, createBooking, getTripPhase, interestEndFor, promoteWaitlist, validateSettings } from '../domain/rules';
 import type { DataService, Result, TripInput } from './DataService';
 import { buildSeed } from './seed';
 import { sessionUserId } from './session';
@@ -72,7 +72,7 @@ export class LocalStorageService implements DataService {
 
   /** Adds the messages that follow from the difference between two states. */
   private withNotifications(before: Snapshot, after: Snapshot, now: number): Snapshot {
-    const fresh = deriveNotifications(before, after, now, uid);
+    const fresh = deriveNotifications(before, after, now, uid, sessionUserId());
     return fresh.length === 0 ? after : { ...after, notifications: [...fresh, ...after.notifications].slice(0, 500) };
   }
 
@@ -210,6 +210,16 @@ export class LocalStorageService implements DataService {
       if (!booking || !trip) return 'Buchung nicht gefunden.';
       if (bus !== null && (bus < 1 || bus > trip.buses)) return 'Diesen Bus gibt es bei der Fahrt nicht.';
       return { ...s, bookings: s.bookings.map((b) => (b.id === bookingId ? { ...b, bus: bus ?? undefined } : b)) };
+    });
+
+  adminCancelBooking: DataService['adminCancelBooking'] = (bookingId) =>
+    this.mutate((s, now) => {
+      const booking = s.bookings.find((b) => b.id === bookingId);
+      const trip = s.trips.find((t) => t.id === booking?.tripId);
+      if (!booking || !trip) return 'Buchung nicht gefunden.';
+      const blocked = adminCancelBlockedReason(trip, now);
+      if (blocked) return blocked;
+      return { ...s, bookings: promoteWaitlist(s.bookings.filter((b) => b.id !== bookingId), trip) };
     });
 
   setBookingPaid: DataService['setBookingPaid'] = (bookingId, paid) =>

@@ -1,3 +1,4 @@
+import { BOOKING_STATUS_LABEL } from './rules';
 import type { AuditAction, AuditEntry, Settings, Snapshot, Trip } from './types';
 
 export const AUDIT_LABEL: Record<AuditAction, string> = {
@@ -17,6 +18,7 @@ export const AUDIT_LABEL: Record<AuditAction, string> = {
   booking_paid: 'Zahlung',
   booking_attended: 'Einstieg',
   booking_bus: 'Bus zugeordnet',
+  booking_removed: 'Buchung storniert',
   roster_imported: 'Mitgliederliste importiert',
   roster_cleared: 'Mitgliederliste geleert',
   member_code_changed: 'Mitgliedscode',
@@ -107,6 +109,15 @@ export function deriveAudit(
     if (b.paid !== old.paid) add('booking_paid', prefix + (b.paid ? 'bezahlt' : 'nicht bezahlt'));
     if (b.attended !== old.attended) add('booking_attended', prefix + (b.attended === true ? 'eingestiegen' : b.attended === false ? 'nicht erschienen' : 'zurückgesetzt'));
     if (b.bus !== old.bus) add('booking_bus', prefix + (b.bus ? `Bus ${b.bus}` : 'kein Bus'));
+  }
+
+  // bookings removed by somebody else (an admin); people cancelling themselves are not logged
+  const afterBookings = new Set(after.bookings.map((b) => b.id));
+  for (const b of before.bookings) {
+    const trip = after.trips.find((t) => t.id === b.tripId);
+    const who = users.get(b.userId);
+    if (afterBookings.has(b.id) || !trip || !who || !actor || actor.id === b.userId) continue;
+    add('booking_removed', `${who.name} · ${trip.title}: ${BOOKING_STATUS_LABEL[b.status]} storniert`);
   }
 
   // member list

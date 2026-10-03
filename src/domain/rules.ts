@@ -228,3 +228,10 @@ export function tripTotals(trip: Trip, bookings: Booking[]) {
   const paid = confirmed.filter((b) => b.paid).reduce((sum, b) => sum + amountDue(b, trip), 0);
   return { people: confirmed.reduce((sum, b) => sum + seatsOf(b), 0), expected, paid, open: expected - paid };
 }
+
+/** Why an admin cannot cancel a booking (null = fine). The cancellation deadline does not apply to admins. */
+export function adminCancelBlockedReason(trip: Trip, now: number): string | null {
+  return now >= Date.parse(trip.departure) ? 'Die Fahrt ist bereits abgefahren.' : null;
+}
+
+export const BOOKING_STATUS_LABEL = { confirmed: 'Platz bestätigt', waitlist: 'Warteliste', interested: 'Interesse' } as const;

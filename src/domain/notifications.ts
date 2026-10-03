@@ -1,7 +1,7 @@
 import type { Booking, Notification, NotificationType, Snapshot, Trip } from './types';
 
 /** Types that concern one person directly. Everything else goes to all users. */
-export const PERSONAL_TYPES: NotificationType[] = ['allocated', 'waitlisted', 'promoted', 'trip_cancelled'];
+export const PERSONAL_TYPES: NotificationType[] = ['allocated', 'waitlisted', 'promoted', 'trip_cancelled', 'booking_removed'];
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr';
@@ -10,7 +10,7 @@ const when = (iso: string) =>
  * Finds out what changed between two states and returns the messages people should get.
  * The database does the same with triggers; the browser demo uses this function.
  */
-export function deriveNotifications(before: Snapshot, after: Snapshot, now: number, newId: () => string): Notification[] {
+export function deriveNotifications(before: Snapshot, after: Snapshot, now: number, newId: () => string, actorId?: string | null): Notification[] {
   const out: Notification[] = [];
   const stamp = new Date(now).toISOString();
   const add = (userId: string, type: NotificationType, title: string, body: string, tripId?: string) =>
@@ -31,6 +31,14 @@ export function deriveNotifications(before: Snapshot, after: Snapshot, now: numb
     } else if (old.status === 'waitlist' && b.status === 'confirmed') {
       add(b.userId, 'promoted', `Platz frei: ${trip.title}`, `Du bist von der Warteliste nachgerückt und hast jetzt einen Platz. Abfahrt: ${when(trip.departure)}.`, trip.id);
     }
+  }
+
+  // A booking that vanished while the person and the trip still exist was removed by someone else (an admin).
+  const afterBookings = new Set(after.bookings.map((b) => b.id));
+  for (const b of before.bookings) {
+    const trip = tripOf(b.tripId);
+    if (afterBookings.has(b.id) || !trip || !userIds.has(b.userId) || !actorId || actorId === b.userId) continue;
+    add(b.userId, 'booking_removed', `Buchung storniert: ${trip.title}`, 'Der Verein hat deine Buchung storniert. Bei Fragen melde dich bitte beim Admin.', trip.id);
   }
 
   const beforeTrips = new Map(before.trips.map((t) => [t.id, t]));

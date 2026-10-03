@@ -86,6 +86,7 @@ export function adminSections(s: Settings): HelpSection[] {
             <li>Wird eine <b>bestätigte</b> Buchung storniert oder ein Konto gelöscht, rückt die Warteliste nach, und zwar in ihrer Reihenfolge. Es rückt nur nach, wessen ganze Gruppe in die freien Plätze passt.</li>
             <li>Erhöht ihr die <b>Platzzahl</b> einer Fahrt, rücken ebenfalls Wartende nach.</li>
             <li>Wer nachrückt, bekommt eine Mitteilung.</li>
+            <li>Storniert ein Admin eine Buchung (Liste &amp; Kasse), rückt die Warteliste genauso nach, und die betroffene Person bekommt eine Mitteilung.</li>
             <li>Das Zurückziehen von Interesse oder von der Warteliste lässt niemanden nachrücken.</li>
           </ul>
 
@@ -161,6 +162,7 @@ export function adminSections(s: Settings): HelpSection[] {
             <li><b>da / fehlt:</b> beim Einsteigen abhaken. „fehlt“ wirkt auf die Punkte (siehe Punkte).</li>
             <li><b>Busse:</b> Bei mehreren Bussen sortiert die Liste nach Bus und Zustiegsstelle. Teile die Mitfahrer in der Schnellansicht <b>Teilnehmer</b> den Bussen zu.</li>
             <li><b>CSV herunterladen:</b> Datei für Excel (Semikolon, UTF-8). Sie enthält Namen, E-Mail, Plätze, Begleitung, Zustieg, Bus, Betrag, bezahlt und eingestiegen.</li>
+            <li><b>Stornieren:</b> Entfernt die Buchung einer Person (bestätigt, Warteliste oder Interesse), auch nach der Stornofrist. Die Person wird benachrichtigt, nach der Abfahrt geht es nicht mehr.</li>
             <li><b>Drucken:</b> Druckansicht ohne Menü. Alle Abschnitte werden mit ausgegeben.</li>
           </ul>
         </>
@@ -228,7 +230,7 @@ export function adminSections(s: Settings): HelpSection[] {
           <ul>
             <li><b>News verwalten:</b> Titel und Text (Zeilenumbrüche bleiben erhalten, es gibt keine Formatierung). Mit „Anpinnen“ steht eine News ganz oben.</li>
             <li>Jede neue Fahrt erzeugt eine Mitteilung in der App für alle, jede neue News für alle außer den Autor.</li>
-            <li>Persönliche Mitteilungen gehen an die Betroffenen: Platz vergeben, Warteliste, nachgerückt, Fahrt abgesagt.</li>
+            <li>Persönliche Mitteilungen gehen an die Betroffenen: Platz vergeben, Warteliste, nachgerückt, Fahrt abgesagt, Buchung von einem Admin storniert.</li>
             <li><b>E-Mail:</b> Nur im Echtbetrieb mit eingerichteter E-Mail-Funktion. Persönliche Meldungen sind standardmäßig an, Rundmails zu neuen Fahrten und News aus. Das stellt jede Person selbst im Profil ein. Der Grund: Kostenlose Mail-Tarife erlauben nur wenige hundert Mails pro Tag, eine Fahrt an 500 Personen würde das sprengen.</li>
           </ul>
         </>
@@ -241,8 +243,8 @@ export function adminSections(s: Settings): HelpSection[] {
       body: (
         <>
           <h4>Änderungsprotokoll</h4>
-          <p>Unter <b>Admin → Änderungsprotokoll</b> stehen die letzten Änderungen mit Datum und Name: Fahrten (angelegt, geändert, abgesagt, gelöscht, Vorrang beendet), News, Einstellungen, Mitgliedschaften, Admin-Rechte, Startwerte, gelöschte Konten, Listenimport und Zahlungs-, Einstiegs- und Bus-Markierungen. Der Mitgliedscode selbst steht nicht im Protokoll.</p>
-          <p>Nicht protokolliert werden die automatische Platzvergabe und die Buchungen der Mitglieder selbst.</p>
+          <p>Unter <b>Admin → Änderungsprotokoll</b> stehen die letzten Änderungen mit Datum und Name: Fahrten (angelegt, geändert, abgesagt, gelöscht, Vorrang beendet), News, Einstellungen, Mitgliedschaften, Admin-Rechte, Startwerte, gelöschte Konten, Listenimport und Zahlungs-, Einstiegs- und Bus-Markierungen sowie von Admins stornierte Buchungen. Der Mitgliedscode selbst steht nicht im Protokoll.</p>
+          <p>Nicht protokolliert werden die automatische Platzvergabe und Buchungen oder Stornierungen der Mitglieder selbst.</p>
           <h4>Datenschutz</h4>
           <ul>
             <li>E-Mail-Adressen sehen nur Admins. Andere Mitglieder sehen in der Rangliste nur abgekürzte Namen und Punkte.</li>
@@ -265,8 +267,8 @@ export function adminSections(s: Settings): HelpSection[] {
           <p>Fahrt <b>absagen</b> und einen Grund eintragen. Alle Betroffenen bekommen eine Mitteilung. Nicht löschen, sonst verschwinden auch die Buchungen.</p>
           <h4>Alle sollen sofort buchen können, ohne Vorrang</h4>
           <p>Setze den Vorlauf in den Einstellungen auf 0. Das gilt für Fahrten, die du danach anlegst. Bei einer bestehenden Fahrt hilft „Interessensphase beenden“.</p>
-          <h4>Jemand will nach Ablauf der Stornofrist noch absagen</h4>
-          <p>Die App erlaubt Admins aktuell nicht, fremde Buchungen zu stornieren. Setze die Stornofrist in den Einstellungen kurz auf 0. Dann kann die Person selbst stornieren, und die Warteliste rückt nach. Stelle die Frist danach wieder zurück.</p>
+          <h4>Jemand will nach Ablauf der Stornofrist noch absagen, oder ein Platz muss frei werden</h4>
+          <p>Öffne <b>Liste &amp; Kasse</b> der Fahrt und tippe bei der Person auf <b>Stornieren</b>, dann auf <b>Wirklich stornieren</b>. Die Stornofrist gilt für Admins nicht. Die Person bekommt eine Mitteilung, die Warteliste rückt nach. Nach der Abfahrt geht das nicht mehr.</p>
           <h4>Jemand hat nicht gezahlt oder ist nicht erschienen</h4>
           <p>Lasse „bezahlt“ offen, in <b>Liste &amp; Kasse</b> siehst du alle offenen Beträge. Markiere Nichterscheinen mit „fehlt“, das wirkt auf die Punkte bei der nächsten Vergabe.</p>
           <h4>Die Vergabe scheint falsch</h4>

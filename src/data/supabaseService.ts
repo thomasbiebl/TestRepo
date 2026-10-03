@@ -137,6 +137,9 @@ export class SupabaseService implements DataService {
       p_stop: options?.stop ?? null,
     })).error);
 
+  adminCancelBooking: DataService['adminCancelBooking'] = async (bookingId) =>
+    fail((await this.sb.rpc('admin_cancel_booking', { p_booking: bookingId })).error);
+
   setBookingPaid: DataService['setBookingPaid'] = async (bookingId, paid) =>
     fail((await this.sb.rpc('admin_set_booking_paid', { p_booking: bookingId, p_paid: paid })).error);
 

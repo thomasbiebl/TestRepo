@@ -141,7 +141,7 @@ export function userSections(s: Settings): HelpSection[] {
         <>
           <ul>
             <li><b>Interesse</b> und <b>Warteliste</b> kannst du jederzeit zurückziehen.</li>
-            <li>Einen <b>bestätigten Platz</b> kannst du {cancelText(s)} selbst stornieren. {s.cancelDeadlineHours > 0 ? 'Danach melde dich bitte bei einem Admin.' : ''}</li>
+            <li>Einen <b>bestätigten Platz</b> kannst du {cancelText(s)} selbst stornieren. {s.cancelDeadlineHours > 0 ? 'Danach melde dich bitte bei einem Admin, der die Buchung für dich stornieren kann.' : ''}</li>
             <li>Nach der Abfahrt geht keine Änderung mehr.</li>
           </ul>
           <p>Gibst du einen Platz frei, rückt die Warteliste automatisch nach. Bitte storniere deshalb möglichst früh.</p>
@@ -158,6 +158,7 @@ export function userSections(s: Settings): HelpSection[] {
           <p>Die Glocke oben rechts zeigt, wie viele neue Mitteilungen es gibt. Du bekommst eine, wenn</p>
           <ul>
             <li>dein Platz vergeben wurde oder du auf der Warteliste gelandet bist,</li>
+            <li>ein Admin deine Buchung storniert hat,</li>
             <li>du von der Warteliste nachgerückt bist,</li>
             <li>eine Fahrt abgesagt wurde, für die du angemeldet bist,</li>
             <li>es eine neue Fahrt oder eine neue News gibt.</li>

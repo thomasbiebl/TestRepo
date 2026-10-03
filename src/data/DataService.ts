@@ -35,6 +35,8 @@ export interface DataService {
   cancel(tripId: string, userId: string): Promise<Result>;
   /** Admin: assigns a booking to a bus (null = unassigned). */
   setBookingBus(bookingId: string, bus: number | null): Promise<Result>;
+  /** Admin: removes somebody's booking (any status, ignores the cancellation deadline, not after departure). */
+  adminCancelBooking(bookingId: string): Promise<Result>;
   /** Admin: marks a booking as paid or open. */
   setBookingPaid(bookingId: string, paid: boolean): Promise<Result>;
   /** Admin: boarded (true), did not show up (false), or not recorded (null). */

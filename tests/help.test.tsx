@@ -94,6 +94,15 @@ describe('guide structure', () => {
     for (const phrase of ['Interessensphase beenden', 'früher', 'Warteliste', 'Begleitpersonen', 'pg_cron', 'fehlt', 'Nachrücken']) expect(t, phrase).toContain(phrase);
   });
 
+  it('describes how admins cancel bookings, and no longer suggests the deadline workaround', () => {
+    const t = text(adminSections(DEFAULT_SETTINGS));
+    expect(t).toContain('Wirklich stornieren');
+    expect(t).toContain('Die Stornofrist gilt für Admins nicht');
+    expect(t).not.toContain('kurz auf 0');
+    expect(t).not.toContain('erlaubt Admins aktuell nicht');
+    expect(text(userSections(withSettings({ cancelDeadlineHours: 24 })))).toContain('Admin, der die Buchung für dich stornieren kann');
+  });
+
   it('keeps links pointing to existing routes', () => {
     const routes = readFileSync('src/App.tsx', 'utf8');
     for (const path of ['/help', '/login', '/admin']) expect(routes + html([...userSections(DEFAULT_SETTINGS), ...adminSections(DEFAULT_SETTINGS)]), path).toContain(path.slice(1));

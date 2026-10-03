@@ -12,10 +12,22 @@ Ohne die Einstellungen unten läuft die App weiter im **Demo-Modus** (Daten nur 
 ## 2. Datenbank einrichten
 
 1. Im Projekt links *SQL Editor* öffnen.
-2. Den Inhalt von `supabase/migrations/0001_init.sql` einfügen und auf *Run* klicken. Es darf kein Fehler erscheinen.
+2. Öffne im Repository den Ordner `supabase/migrations` und führe **alle Dateien nacheinander in der Reihenfolge der Nummern** aus: Inhalt der Datei einfügen, auf *Run* klicken, dann die nächste Datei in einer neuen Abfrage. Es darf kein Fehler erscheinen.
+
+   | Datei | Inhalt |
+   | --- | --- |
+   | `0001_init.sql` | Tabellen, Zugriffsregeln, Buchung und Platzvergabe |
+   | `0002_profile.sql` | Profil bearbeiten, Konto löschen |
+   | `0003_trip_info.sql` | Fahrt-Infos, Absage, Stornofrist |
+   | `0004_companions.sql` | Begleitpersonen, Zustiegsstellen, Busse |
+   | `0005_participants.sql` | Bezahlt, eingestiegen, Punkte |
+   | `0006_notifications.sql` | Mitteilungen |
+   | `0007_roster.sql` | Mitgliederliste und Mitgliedscode |
+   | `0008_audit.sql` | Änderungsprotokoll |
+   | `0009_admin_cancel_booking.sql` | Admins stornieren Buchungen |
 3. Hinweis zu `pg_cron`: Die Datei versucht, die automatische Vergabe alle 5 Minuten einzurichten. Klappt das nicht, erscheint nur ein Hinweis. Dann läuft die Vergabe beim Öffnen der App, was ebenfalls funktioniert. Aktivieren kannst du es unter *Database → Extensions → pg_cron*, danach die letzten Zeilen der Datei erneut ausführen.
 
-Spätere Änderungen am Schema kommen als neue Dateien (`0002_….sql`) in `supabase/migrations/` und werden auf dieselbe Weise ausgeführt.
+Kommt in einer neuen Version der App eine weitere Datei dazu (z. B. `0010_….sql`), führst du nur die neuen Dateien auf dieselbe Weise aus. Bereits ausgeführte Dateien nie ein zweites Mal ausführen.
 
 ## 3. Anmeldung einstellen
 
