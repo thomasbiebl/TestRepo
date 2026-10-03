@@ -152,3 +152,35 @@ a.note h3, article.note h3 { font-size: 16px; }
 .social { display: flex; flex-direction: column; gap: 10px; }
 
 .errortext { margin: 0; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+
+/* Help */
+.top-actions { display: flex; align-items: center; gap: 4px; }
+.link-plain { color: var(--muted); font-size: 14px; text-decoration: none; }
+.help { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.help details { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.help summary { cursor: pointer; padding: 14px; font-weight: 700; font-size: 16px; list-style: none; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.help summary::-webkit-details-marker { display: none; }
+.help summary::after { content: '＋'; color: var(--muted); font-weight: 400; flex: none; }
+.help details[open] summary::after { content: '−'; }
+.help-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.help-body h4 { margin: 8px 0 0; font-size: 15px; }
+.help-body p, .help-body ul, .help-body ol { margin: 0; }
+.help-body ul, .help-body ol { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.help-body code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+.formula { padding: 10px 12px; background: var(--surface-2); border-radius: var(--radius-sm); font-weight: 700; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.help-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.help-table.wide { min-width: 540px; }
+.help-table th, .help-table td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.help-table th { white-space: nowrap; }
+.help-table.example td:nth-child(-n+4) { white-space: nowrap; }
+.help-table th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+.help-table tr[data-ok='false'] td { color: var(--muted); }
+.flow { list-style: none; padding: 0 !important; counter-reset: step; }
+.flow li { counter-increment: step; position: relative; padding-left: 40px; display: flex; flex-direction: column; gap: 2px; }
+.flow li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-weight: 700; display: grid; place-items: center; }
+.flow li span { color: var(--muted); }
+@media print { .help details { break-inside: avoid; } .help-body { display: flex; } }
+.help-table.example { font-size: 13px; }
+.help-table.example th, .help-table.example td { padding: 6px 4px; }
+.help-table.example th { font-size: 11px; letter-spacing: 0; }

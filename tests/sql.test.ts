@@ -462,6 +462,61 @@ describe('change log', () => {
   });
 });
 
+describe('admin cancels bookings', () => {
+  const bookingOf = async (trip: string, user: string) =>
+    (await db.query<{ id: string }>(`select id from bookings where trip_id = $1 and user_id = $2`, [trip, ids[user]])).rows[0]!.id;
+  const openTrip = async (seats: number) => {
+    const trip = await addTrip(seats, 0);
+    await endInterest(trip);
+    return trip;
+  };
+
+  it('lets only admins do it', async () => {
+    const trip = await openTrip(2);
+    await as('anna', `select book_trip($1)`, [trip]);
+    const id = await bookingOf(trip, 'anna');
+    expect(await asErr('anna', `select admin_cancel_booking($1)`, [id])).toMatch(/Admins/);
+    expect(await asErr('lukas', `select admin_cancel_booking($1)`, [id])).toMatch(/Admins/);
+    expect(await asErr('admin', `select admin_cancel_booking(gen_random_uuid())`)).toMatch(/nicht gefunden/);
+    await as('admin', `select admin_cancel_booking($1)`, [id]);
+    expect(await statuses(trip)).toEqual({});
+  });
+
+  it('lets the waiting list move up, tells the person and writes the log', async () => {
+    const trip = await openTrip(1);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await as('max', `select book_trip($1)`, [trip]);
+    await db.exec(`delete from notifications; delete from audit_log`);
+    await as('admin', `select admin_cancel_booking($1)`, [await bookingOf(trip, 'anna')]);
+    expect(await statuses(trip)).toEqual({ max: 'confirmed' });
+    expect((await db.query(`select user_id, type, title from notifications order by type`)).rows.map((r: any) => `${r.type}:${r.title}`)).toEqual([
+      'booking_removed:Buchung storniert: Augsburg', 'promoted:Platz frei: Augsburg',
+    ]);
+    expect((await db.query<{ user_id: string }>(`select user_id from notifications where type = 'booking_removed'`)).rows[0]!.user_id).toBe(ids.anna);
+    expect((await db.query(`select action, detail, actor_name from audit_log`)).rows).toEqual([
+      { action: 'booking_removed', detail: 'anna · Augsburg: Platz bestätigt storniert', actor_name: 'admin' },
+    ]);
+  });
+
+  it('ignores the cancellation deadline but not the departure, and works for waiting list and interest', async () => {
+    await as('admin', `update settings set cancel_deadline_hours = 48`);
+    const trip = await openTrip(1);
+    await as('anna', `select book_trip($1)`, [trip]);
+    await as('max', `select book_trip($1)`, [trip]);
+    await db.query(`update trips set departure = now() + interval '3 hours' where id = $1`, [trip]);
+    expect(await asErr('anna', `select cancel_booking($1)`, [trip])).toMatch(/48 Stunden/);
+    await as('admin', `select admin_cancel_booking($1)`, [await bookingOf(trip, 'max')]); // waiting list entry
+    expect(await statuses(trip)).toEqual({ anna: 'confirmed' });
+    await db.query(`update trips set departure = now() - interval '1 hour' where id = $1`, [trip]);
+    expect(await asErr('admin', `select admin_cancel_booking($1)`, [await bookingOf(trip, 'anna')])).toMatch(/abgefahren/);
+
+    const interest = await addTrip(2);
+    await as('karl', `select book_trip($1)`, [interest]);
+    await as('admin', `select admin_cancel_booking($1)`, [await bookingOf(interest, 'karl')]);
+    expect(await statuses(interest)).toEqual({});
+  });
+});
+
 describe('own profile', () => {
   it('lets users change their own name, and nothing else', async () => {
     await as('anna', `select update_my_name('Anna Neu')`);

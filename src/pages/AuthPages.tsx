@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { HELP_LINKS } from '../help/sections';
 import { ADMIN_EMAIL, ADMIN_PASSWORD, DEMO_PASSWORD } from '../data/seed';
 import { useApp } from '../state/AppContext';
 
@@ -81,6 +82,7 @@ export function Login() {
         Noch kein Konto? <Link to="/register">Registrieren</Link>
         {auth.resetPassword && <> · <Link to="/forgot-password">Passwort vergessen?</Link></>}
       </p>
+      <p className="muted center"><Link to={HELP_LINKS.start}>Anleitung ansehen</Link></p>
       {auth.isDemo && <div className="card demo">
         <b>Demo-Zugänge</b>
         <p className="muted">Die Daten liegen nur in diesem Browser. Tippen zum Ausfüllen:</p>
@@ -145,7 +147,7 @@ export function Register() {
         <button className="btn" disabled={busy}>Konto erstellen</button>
       </form>
       <p className="muted center">
-        Schon registriert? <Link to="/login">Anmelden</Link>
+        Schon registriert? <Link to="/login">Anmelden</Link> · <Link to={HELP_LINKS.start}>Anleitung</Link>
       </p>
     </AuthFrame>
   );

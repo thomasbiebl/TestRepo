@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { LocalStorageService } from '../src/data/localStorageService';
 import { hashPassword } from '../src/data/seed';
 import { parseRoster } from '../src/domain/roster';
@@ -75,5 +75,63 @@ describe('change log in the demo', () => {
     const log = (await svc.load()).audit;
     expect(log.map((e) => e.action)).toEqual(['settings_changed', 'news_created']);
     expect(log[0]!.detail).toBe('Vorlauf für Mitglieder');
+  });
+});
+
+describe('admin cancels a booking in the demo', () => {
+  /** Pretends to be a browser with the given person logged in. */
+  const loggedInAs = (userId: string) => {
+    const store = new Map<string, string>([['fanclub.session.v1', userId]]);
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+      key: () => null,
+      length: 0,
+    });
+    return store;
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('removes the booking, lets the waiting list move up and informs both people', async () => {
+    loggedInAs('admin');
+    const svc = new LocalStorageService();
+    expect((await svc.adminCancelBooking('dortmund-max')).ok).toBe(true);
+    const snap = await svc.load();
+    expect(snap.bookings.find((b) => b.id === 'dortmund-max')).toBeUndefined();
+    expect(snap.bookings.find((b) => b.id === 'dortmund-lukas')?.status).toBe('confirmed');
+    const types = (userId: string) => snap.notifications.filter((n) => n.userId === userId).map((n) => n.type);
+    expect(types('max')).toEqual(['booking_removed']);
+    expect(types('lukas')).toEqual(['promoted']);
+    expect(snap.audit.map((e) => `${e.action}:${e.detail}:${e.actorName}`)).toEqual(['booking_removed:Max Huber · Dortmund (A): Platz bestätigt storniert:Admin']);
+  });
+
+  it('ignores the cancellation deadline, but not the departure', async () => {
+    loggedInAs('admin');
+    const svc = new LocalStorageService();
+    const snap = await svc.load();
+    await svc.saveSettings({ ...snap.settings, cancelDeadlineHours: 48 });
+    const dortmund = snap.trips.find((t) => t.id === 'dortmund')!;
+    const input = { title: dortmund.title, meetingPoint: dortmund.meetingPoint, price: dortmund.price, seats: dortmund.seats, notes: '', stops: [], buses: 1, points: 1, kickoff: undefined, returnTime: undefined };
+    await svc.saveTrip('dortmund', { ...input, departure: new Date(Date.now() + 3_600_000).toISOString() });
+    // the person herself is blocked by the deadline ...
+    loggedInAs('anna');
+    expect((await svc.cancel('dortmund', 'anna')).ok).toBe(false);
+    // ... the admin is not
+    loggedInAs('admin');
+    expect((await svc.adminCancelBooking('dortmund-anna')).ok).toBe(true);
+    await svc.saveTrip('dortmund', { ...input, departure: new Date(Date.now() - 3_600_000).toISOString() });
+    const res = await svc.adminCancelBooking('dortmund-sophie');
+    expect(res.ok ? '' : res.error).toMatch(/abgefahren/);
+    expect((await svc.adminCancelBooking('gibt-es-nicht')).ok).toBe(false);
+  });
+
+  it('does not log or announce a person cancelling their own booking', async () => {
+    loggedInAs('max');
+    const svc = new LocalStorageService();
+    expect((await svc.cancel('dortmund', 'max')).ok).toBe(true);
+    const snap = await svc.load();
+    expect(snap.audit).toEqual([]);
+    expect(snap.notifications.map((n) => n.type)).toEqual(['promoted']);
   });
 });

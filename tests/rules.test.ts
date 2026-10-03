@@ -5,7 +5,7 @@ import { buildIcs } from '../src/domain/ics';
 import { deriveNotifications } from '../src/domain/notifications';
 import { buildParticipantCsv, passengersByBus } from '../src/domain/participants';
 import {
-  allocateAll, allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, noShowCount, pastTripCount, promoteWaitlist, tripTotals, userScore, validateSettings, waitlistOf,
+  adminCancelBlockedReason, allocateAll, allocateTrip, cancelBlockedReason, createBooking, freeSeats, getTripPhase, interestEndFor, noShowCount, pastTripCount, promoteWaitlist, tripTotals, userScore, validateSettings, waitlistOf,
 } from '../src/domain/rules';
 import { DEFAULT_SETTINGS, type Booking, type Settings, type Snapshot, type Trip, type User } from '../src/domain/types';
 
@@ -396,5 +396,42 @@ describe('change log', () => {
     expect(deriveAudit(before, after, admin, T0, id, true).map((e) => `${e.action}:${e.detail}`)).toEqual(['roster_imported:1 neu, 0 aktualisiert, 1 zu Mitgliedern']);
     expect(actions(deriveAudit(before, after, admin, T0, id))).toContain('member_changed');
     expect(actions(deriveAudit(after, { ...after, roster: [] }, admin, T0, id))).toEqual(['roster_cleared']);
+  });
+});
+
+describe('bookings removed by an admin', () => {
+  let n = 0;
+  const id = () => `r${++n}`;
+  const users = [user('anna', { name: 'Anna' }), user('boss', { name: 'Boss', isAdmin: true })];
+  const before = snap(users, [trip({ title: 'Mainz' })], [booking('anna', 'confirmed')]);
+  const after = { ...before, bookings: [] };
+
+  it('tells the person and logs it when somebody else removes the booking', () => {
+    const notes = deriveNotifications(before, after, T0, id, 'boss');
+    expect(notes.map((x) => `${x.userId}:${x.type}:${x.title}`)).toEqual(['anna:booking_removed:Buchung storniert: Mainz']);
+    const log = deriveAudit(before, after, { id: 'boss', name: 'Boss' }, T0, id);
+    expect(log.map((e) => `${e.action}:${e.detail}`)).toEqual(['booking_removed:Anna · Mainz: Platz bestätigt storniert']);
+  });
+
+  it('stays silent when people cancel themselves or nobody is known', () => {
+    expect(deriveNotifications(before, after, T0, id, 'anna')).toEqual([]);
+    expect(deriveAudit(before, after, { id: 'anna', name: 'Anna' }, T0, id)).toEqual([]);
+    expect(deriveNotifications(before, after, T0, id, null)).toEqual([]);
+    expect(deriveAudit(before, after, null, T0, id)).toEqual([]);
+  });
+
+  it('stays silent when the person or the trip is deleted along with the booking', () => {
+    const noUser = { ...after, users: [users[1]!] };
+    const noTrip = { ...after, trips: [] };
+    expect(deriveNotifications(before, noUser, T0, id, 'boss')).toEqual([]);
+    expect(deriveNotifications(before, noTrip, T0, id, 'boss').filter((x) => x.type === 'booking_removed')).toEqual([]);
+    expect(deriveAudit(before, noUser, { id: 'boss', name: 'Boss' }, T0, id).map((e) => e.action)).toEqual(['user_deleted']);
+    expect(deriveAudit(before, noTrip, { id: 'boss', name: 'Boss' }, T0, id).map((e) => e.action)).toEqual(['trip_deleted']);
+  });
+
+  it('only blocks after the departure', () => {
+    const t = trip();
+    expect(adminCancelBlockedReason(t, Date.parse(t.departure) - 1)).toBeNull();
+    expect(adminCancelBlockedReason(t, Date.parse(t.departure))).toMatch(/abgefahren/);
   });
 });

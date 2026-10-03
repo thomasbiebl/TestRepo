@@ -14,7 +14,7 @@ export interface EmailPrefs {
   email_broadcast: boolean;
 }
 
-const PERSONAL = new Set(['allocated', 'waitlisted', 'promoted', 'trip_cancelled']);
+const PERSONAL = new Set(['allocated', 'waitlisted', 'promoted', 'trip_cancelled', 'booking_removed']);
 
 /** Personal messages follow `email_personal`, messages to everyone follow `email_broadcast`. */
 export function shouldEmail(type: string, prefs: EmailPrefs): boolean {

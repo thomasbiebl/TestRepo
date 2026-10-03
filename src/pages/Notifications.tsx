@@ -4,7 +4,7 @@ import type { Notification, NotificationType } from '../domain/types';
 import { useApp } from '../state/AppContext';
 
 const ICON: Record<NotificationType, string> = {
-  allocated: '✅', waitlisted: '⏳', promoted: '🎉', trip_cancelled: '⚠️', new_trip: '🚌', news: '📰',
+  allocated: '✅', waitlisted: '⏳', promoted: '🎉', trip_cancelled: '⚠️', booking_removed: '🚫', new_trip: '🚌', news: '📰',
 };
 
 const fmtWhen = (iso: string) =>

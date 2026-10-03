@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { getTripPhase } from '../domain/rules';
+import { HELP_LINKS } from '../help/sections';
 import { useApp } from '../state/AppContext';
 
 export function AdminHome() {
@@ -27,6 +28,7 @@ export function AdminHome() {
         <Link className="btn ghost" to="/admin/news">News verwalten</Link>
         <Link className="btn ghost" to="/admin/settings">Einstellungen</Link>
         <Link className="btn ghost" to="/admin/log">Änderungsprotokoll</Link>
+        <Link className="btn ghost" to={HELP_LINKS.admin}>Anleitung für Admins</Link>
       </div>
       {data.resetDemo && (
         <>
