@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { Badge, Countdown, PhaseBadge, SeatBar, StatusBadge, fmtDate, fmtPrice, shortName } from '../components/ui';
 import { buildIcs } from '../domain/ics';
 import { byTrip, cancelBlockedReason, confirmedCount, amountDue, fitsInOrder, freeSeats, getTripPhase, rankInterested, userScore, waitlistOf } from '../domain/rules';
 import { downloadFile } from '../lib/download';
+import { HELP_LINKS } from '../help/sections';
 import { useApp } from '../state/AppContext';
 
 export function TripDetail() {
@@ -50,7 +51,7 @@ export function TripDetail() {
           {phase === 'interest' && (
             <>
               <Countdown ms={Date.parse(trip.interestEndsAt) - now} />
-              <p className="muted">Danach werden die Plätze automatisch nach bisherigen Fahrten an die Interessenten vergeben. Freie Plätze können dann alle buchen.</p>
+              <p className="muted">Danach werden die Plätze automatisch nach Punkten an die Interessenten vergeben. Freie Plätze können dann alle buchen. <Link to={HELP_LINKS.allocation}>Wie funktioniert die Vergabe?</Link></p>
             </>
           )}
           {phase === 'open' && (

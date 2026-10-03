@@ -32,6 +32,7 @@ Als „bisherige Fahrten“ zählen bestätigte Plätze auf abgefahrenen Fahrten
 - News veröffentlichen und anpinnen
 - Einstellungen: Vorlauf für Mitglieder, Gäste dürfen buchen, Warteliste, Stornofrist, Begleitpersonen, Abzug bei Nichterscheinen, Vorgaben für neue Fahrten, Vereinsname
 - Änderungsprotokoll: wer hat wann was geändert
+- **Hilfe in der App** (Symbol „?“ oben, auch ohne Anmeldung unter `#/help`): Anleitung für Mitglieder und, nur für Admins, die genaue Buchungslogik mit allen Einstellungen. Die Texte folgen den Einstellungen des Vereins, das Rechenbeispiel zur Platzvergabe wird mit der echten Vergabe berechnet. Die Texte stehen in `src/help/`. Ändert sich eine Regel, passe dort den Text an, die Tests in `tests/help.test.tsx` melden Abweichungen.
 - Installierbar als PWA („Zum Startbildschirm hinzufügen“), läuft offline
 
 **Rangfolge bei der Platzvergabe:** Punkte = Startwert + Punkte der Fahrten, an denen man teilgenommen hat, minus Abzug für Nichterscheinen (einstellbar). Eine Fahrt zählt in der Regel 1 Punkt, Admins können weite Fahrten höher gewichten. Eine Buchung mit Begleitpersonen belegt entsprechend viele Plätze. Passt eine Gruppe nicht mehr in den Bus, kommt sie auf die Warteliste, und die nächsten Interessenten werden weiter geprüft.

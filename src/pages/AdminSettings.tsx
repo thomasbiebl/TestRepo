@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { validateSettings } from '../domain/rules';
 import { DEFAULT_SETTINGS, type Settings } from '../domain/types';
+import { Link } from 'react-router-dom';
+import { HELP_LINKS } from '../help/sections';
 import { useApp } from '../state/AppContext';
 
 type Draft = Record<'clubName' | 'interestDays' | 'defaultSeats' | 'defaultPrice' | 'defaultMeetingPoint' | 'cancelDeadlineHours' | 'maxCompanions' | 'noShowPenalty' | 'memberCode', string> &
@@ -54,6 +56,7 @@ export function AdminSettings() {
   return (
     <>
       <h1 className="title">Einstellungen</h1>
+      <p className="muted"><Link to={HELP_LINKS.adminSettings}>Was bewirken die Einstellungen?</Link></p>
       <form className="stack" onSubmit={submit}>
         <section className="card form">
           <h3>Verein</h3>

@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { scrollToTop } from '../lib/scroll';
 import { useApp } from '../state/AppContext';
 import { useNewsSeen } from '../state/newsSeen';
 
-export function Layout() {
+export function Layout({ children }: { children?: ReactNode }) {
   const { user, snap } = useApp();
   const { hasUnread } = useNewsSeen(user?.id, snap?.news);
   const { pathname } = useLocation();
@@ -20,7 +20,7 @@ export function Layout() {
     ...(user?.isAdmin ? [{ to: '/admin', label: 'Admin', icon: '⚙️' }] : []),
   ];
   const unread = snap?.notifications.filter((n) => n.userId === user?.id && !n.readAt).length ?? 0;
-  const deep = pathname.startsWith('/trip/') || pathname.startsWith('/admin/');
+  const deep = pathname.startsWith('/trip/') || pathname.startsWith('/admin/') || pathname.startsWith('/help');
 
   return (
     <div className="shell">
@@ -31,14 +31,19 @@ export function Layout() {
           ) : (
             <small>{user ? `Servus ${user.name.split(' ')[0]}${user.isMember ? ' · Mitglied' : ''}` : ''}</small>
           )}
+          <span className="top-actions">
+          <Link to="/help" className="bell" aria-label="Hilfe und Anleitung">
+            <span aria-hidden="true">❓</span>
+          </Link>
           <Link to="/notifications" className="bell" aria-label={unread > 0 ? `Mitteilungen, ${unread} neu` : 'Mitteilungen'}>
             <span aria-hidden="true">🔔</span>
             {unread > 0 && <i className="count">{unread > 9 ? '9+' : unread}</i>}
           </Link>
+          </span>
         </div>
       </header>
       <main className="page">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       <nav className="tabs" aria-label="Hauptnavigation">
         {tabs.map((t) => (

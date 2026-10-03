@@ -11,6 +11,7 @@ import { AdminTripList } from './pages/AdminTripList';
 import { AdminTrips } from './pages/AdminTrips';
 import { AdminUsers } from './pages/AdminUsers';
 import { ForgotPassword, Login, Register, ResetPassword } from './pages/AuthPages';
+import { HelpPage } from './pages/Help';
 import { MyBookings } from './pages/MyBookings';
 import { News } from './pages/News';
 import { Notifications } from './pages/Notifications';
@@ -48,6 +49,7 @@ export function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<RequireUser />}>
           <Route index element={<Trips />} />

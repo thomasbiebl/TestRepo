@@ -3,6 +3,7 @@ import { Badge, StatusBadge, fmtDate, fmtPrice } from '../components/ui';
 import { buildParticipantCsv, passengersByBus, type Passenger } from '../domain/participants';
 import { amountDue, byTrip, seatsOf, tripTotals, waitlistOf } from '../domain/rules';
 import { downloadFile } from '../lib/download';
+import { HELP_LINKS } from '../help/sections';
 import { useApp } from '../state/AppContext';
 
 /** Passenger list for the bus driver and the treasurer: boarding, payment, print and CSV. */
@@ -63,6 +64,7 @@ export function AdminTripList() {
         <button className="chip" onClick={() => downloadFile(csvName, buildParticipantCsv(trip, snap), 'text/csv;charset=utf-8')}>CSV herunterladen</button>
         <button className="chip" onClick={() => window.print()}>Drucken</button>
         <Link className="chip" to="/admin/trips">Zurück zu den Fahrten</Link>
+        <Link className="chip" to={HELP_LINKS.adminList}>Hilfe zur Liste und Kasse</Link>
       </div>
 
       {groups.size === 0 && <p className="notice">Noch keine bestätigten Mitfahrer.</p>}

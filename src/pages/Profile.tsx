@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '../components/ui';
 import { buildMyExport } from '../domain/exports';
 import { noShowCount, pastTripCount, userScore } from '../domain/rules';
 import { downloadFile } from '../lib/download';
+import { HELP_LINKS } from '../help/sections';
 import { useApp } from '../state/AppContext';
 import { THEMES } from '../themes';
 import { useTheme } from '../themes/ThemeProvider';
@@ -124,6 +125,12 @@ export function Profile() {
               </button>
             ))}
           </div>
+        </section>
+
+        <section className="card">
+          <h3>Hilfe und Anleitung</h3>
+          <p className="muted">Wie die App funktioniert, wie die Plätze vergeben werden und was bei Problemen hilft.</p>
+          <Link className="btn ghost" to={HELP_LINKS.start}>Anleitung öffnen</Link>
         </section>
 
         <section className="card">
