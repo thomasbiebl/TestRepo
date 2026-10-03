@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { Loading } from './components/Loading';
 import { AdminHome } from './pages/AdminHome';
 import { AdminLog } from './pages/AdminLog';
 import { AdminNews } from './pages/AdminNews';
@@ -20,7 +21,7 @@ import { useApp } from './state/AppContext';
 
 function RequireUser() {
   const { snap, user } = useApp();
-  if (!snap) return <p className="loading">Lädt …</p>;
+  if (!snap) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
   return <Layout />;
 }

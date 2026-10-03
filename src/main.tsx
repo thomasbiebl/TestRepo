@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AppProvider } from './state/AppContext';
 import { ThemeProvider } from './themes/ThemeProvider';
 import './themes/nacht.css';
@@ -16,11 +17,13 @@ registerSW({ immediate: true });
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>
-      <HashRouter>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </HashRouter>
+      <ErrorBoundary>
+        <HashRouter>
+          <AppProvider>
+            <App />
+          </AppProvider>
+        </HashRouter>
+      </ErrorBoundary>
     </ThemeProvider>
   </StrictMode>,
 );
