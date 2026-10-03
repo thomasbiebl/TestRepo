@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup 2 – Stadion-Nacht</title>
+<style>
+:root{--red:#DC052D;--blue:#0066B2;--navy:#0B1D3A;--navy2:#13294d;--ink:#eaf0fa;--muted:#8fa3c4}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#05101f;color:var(--ink)}
+h1.t{text-align:center;font-size:18px;margin:16px 0 4px}p.s{text-align:center;color:var(--muted);margin:0 0 16px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:0 16px 32px}
+.phone{width:390px;height:780px;background:var(--navy);border-radius:32px;border:8px solid #000;overflow:hidden;display:flex;flex-direction:column}
+.top{padding:20px 16px 8px}.top small{color:var(--muted);font-size:12px}.top h2{margin:2px 0 0;font-size:24px;letter-spacing:.3px}
+.top h2 span{color:var(--red)}
+.body{flex:1;overflow:auto;padding:8px 16px 14px}
+.card{background:var(--navy2);border:1px solid #1f3a68;border-radius:16px;padding:14px;margin-bottom:12px}
+.card.hot{border-color:var(--red);box-shadow:0 0 0 1px var(--red) inset}
+.card h3{margin:6px 0 2px;font-size:17px}.muted{color:var(--muted);font-size:13px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--red);color:#fff;letter-spacing:.4px;text-transform:uppercase}
+.badge.blue{background:var(--blue)}.badge.gray{background:#3a5079}.badge.green{background:#17a35c}
+.bar{height:10px;background:#0a1830;border-radius:9px;overflow:hidden;margin:12px 0 6px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),#3da0ff)}.bar i.r{background:linear-gradient(90deg,var(--red),#ff4d6a)}
+.tabs{display:flex;background:#071326;border-top:1px solid #1f3a68}.tabs div{flex:1;text-align:center;padding:10px 0 12px;font-size:11px;color:var(--muted)}
+.tabs div.on{color:#fff}.tabs div.on b{background:var(--red);border-radius:12px}.tabs b{display:block;width:44px;margin:0 auto 2px;font-size:18px;padding:2px 0}
+.btn{display:block;border-radius:14px;padding:15px;font-size:16px;font-weight:700;color:#fff;background:var(--red);margin-top:10px;text-align:center}
+.btn.ghost{background:transparent;border:2px solid #3a5079;color:var(--ink)}
+.count{display:flex;gap:8px;margin:10px 0}.count div{flex:1;background:#0a1830;border-radius:12px;text-align:center;padding:10px 0}.count b{display:block;font-size:26px}.count span{font-size:11px;color:var(--muted)}
+.rank{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #1f3a68;font-size:14px}.rank:last-child{border:0}.rank.me{color:#fff;font-weight:700}.rank b{color:var(--red)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}.kpi div{background:var(--navy2);border-radius:16px;padding:14px;border:1px solid #1f3a68}.kpi b{display:block;font-size:28px}
+</style></head><body>
+<h1 class="t">Mockup 2 – Stadion-Nacht</h1><p class="s">Dunkles Navy-Design, rote Highlights, Fortschrittsbalken</p>
+<div class="row">
+
+<div class="phone"><div class="top"><small>Servus Thomas</small><h2>Bus<span>fahrten</span></h2></div>
+<div class="body">
+<div class="card hot"><span class="badge">Interesse · Mitglieder</span><h3>Augsburg (A)</h3><div class="muted">Sa 14.11. · 11:00 · 50 Plätze</div>
+<div class="bar"><i class="r" style="width:64%"></i></div><div class="muted">32 Interessenten · endet in 1 T 6 Std</div></div>
+<div class="card"><span class="badge blue">Offene Buchung</span><h3>Leipzig (A)</h3><div class="muted">Sa 05.12. · 06:30 · 50 Plätze</div>
+<div class="bar"><i style="width:82%"></i></div><div class="muted">Noch 9 Plätze frei</div></div>
+<div class="card"><span class="badge gray">Ausgebucht</span><h3>Dortmund (A)</h3><div class="muted">Sa 19.12. · 07:00 · 50 Plätze</div>
+<div class="bar"><i class="r" style="width:100%"></i></div><div class="muted">Warteliste: 4 Personen</div></div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Buchungen</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="top"><small>‹ Alle Fahrten</small><h2>Augsburg <span>(A)</span></h2></div>
+<div class="body">
+<div class="card hot"><span class="badge">Phase 1 · Interesse</span>
+<div class="count"><div><b>01</b><span>TAGE</span></div><div><b>06</b><span>STD</span></div><div><b>12</b><span>MIN</span></div></div>
+<div class="muted">Danach werden die Plätze automatisch nach bisherigen Fahrten vergeben.</div></div>
+<div class="card"><h3 style="margin-top:0">Rangliste (Fahrten)</h3>
+<div class="rank"><span>1 · Max H.</span><b>23</b></div><div class="rank"><span>2 · Julia S.</span><b>21</b></div><div class="rank"><span>3 · Karl B.</span><b>19</b></div>
+<div class="rank me"><span>4 · Du</span><b>17</b></div><div class="rank"><span>… 32 Interessenten</span><b>50 Plätze</b></div></div>
+<div class="btn">Interesse bekunden</div><div class="btn ghost">Zurückziehen</div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Buchungen</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="top"><small>Admin</small><h2>Zentrale</h2></div>
+<div class="body">
+<div class="kpi"><div><b>3</b><span class="muted">aktive Fahrten</span></div><div><b>126</b><span class="muted">Benutzer</span></div><div><b>84</b><span class="muted">Mitglieder</span></div><div><b>4</b><span class="muted">Warteliste</span></div></div>
+<div class="btn">+ Neue Fahrt</div>
+<div class="card" style="margin-top:12px"><h3 style="margin-top:0">Benutzer</h3>
+<div class="rank"><span>Max Huber</span><span class="badge green">Mitglied</span></div><div class="rank"><span>Anna Maier</span><span class="badge green">Mitglied</span></div><div class="rank"><span>Lukas Weiß</span><span class="badge gray">Gast</span></div></div>
+</div>
+<div class="tabs"><div><b>🚌</b>Fahrten</div><div><b>🎫</b>Buchungen</div><div><b>👤</b>Profil</div><div class="on"><b>⚙️</b>Admin</div></div></div>
+
+</div></body></html>

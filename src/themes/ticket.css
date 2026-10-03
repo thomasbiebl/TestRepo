@@ -1,0 +1,57 @@
+/* Ticket: Verlauf von Rot nach Blau, Fahrten als Tickets mit Abriss-Kante. */
+:root[data-theme='ticket'] {
+  color-scheme: light;
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f2f4f8;
+  --border: #d5dae2;
+  --fg: #0b1d3a;
+  --muted: #5d6879;
+  --primary: #dc052d;
+  --primary-hover: #b80425;
+  --on-primary: #ffffff;
+  --accent: #0066b2;
+  --accent-strong: #0066b2;
+  --ok: #1e9e5a;
+  --warn: #b77a00;
+  --focus: #0066b2;
+  --header-bg: linear-gradient(135deg, #dc052d, #0066b2);
+  --header-fg: #ffffff;
+  --header-muted: rgba(255, 255, 255, 0.88);
+  --tabbar-bg: #ffffff;
+  --tab-active-bg: transparent;
+  --tab-active-fg: #dc052d;
+  --badge-bg: #8d97a5;
+  --bar-track: #e3e7ec;
+  --bar-fill: #0066b2;
+  --bar-fill-full: #dc052d;
+  --highlight-border: #dc052d;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --shadow: 0 4px 12px rgba(11, 29, 58, 0.1);
+  --title-weight: 800;
+}
+
+:root[data-theme='ticket'] .top { border-radius: 0 0 24px 24px; padding-bottom: 18px; margin-bottom: 8px; }
+:root[data-theme='ticket'] .card { border-width: 0; }
+:root[data-theme='ticket'] .card.hot { border-width: 0; box-shadow: var(--shadow), 0 0 0 2px var(--highlight-border) inset; }
+/* The last line of a trip card sits below a dashed tear-off edge with notches. */
+:root[data-theme='ticket'] .card.trip { overflow: hidden; }
+:root[data-theme='ticket'] .card.trip > .muted:last-child {
+  position: relative;
+  margin: 10px -14px -2px;
+  padding: 12px 14px 2px;
+  border-top: 2px dashed var(--border);
+}
+:root[data-theme='ticket'] .card.trip > .muted:last-child::before,
+:root[data-theme='ticket'] .card.trip > .muted:last-child::after {
+  content: '';
+  position: absolute;
+  top: -11px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg);
+}
+:root[data-theme='ticket'] .card.trip > .muted:last-child::before { left: -10px; }
+:root[data-theme='ticket'] .card.trip > .muted:last-child::after { right: -10px; }

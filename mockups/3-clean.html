@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup 3 – Clean</title>
+<style>
+:root{--red:#DC052D;--blue:#0066B2;--navy:#0B1D3A;--muted:#7a8494;--line:#eceff3}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#e9ebee;color:var(--navy)}
+h1.t{text-align:center;font-size:18px;margin:16px 0 4px}p.s{text-align:center;color:var(--muted);margin:0 0 16px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:0 16px 32px}
+.phone{width:390px;height:780px;background:#fff;border-radius:32px;border:8px solid #111;overflow:hidden;display:flex;flex-direction:column}
+.top{padding:26px 22px 10px}.top small{color:var(--muted);font-size:13px}.top h2{margin:4px 0 0;font-size:30px;font-weight:800;letter-spacing:-.5px}
+.top h2:after{content:"";display:block;width:36px;height:4px;background:var(--red);border-radius:4px;margin-top:10px}
+.body{flex:1;overflow:auto;padding:8px 22px 16px}
+.item{padding:18px 0;border-bottom:1px solid var(--line)}.item h3{margin:6px 0 4px;font-size:19px}
+.muted{color:var(--muted);font-size:14px}
+.tag{font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px}.tag.b{color:var(--blue)}.tag.g{color:var(--muted)}
+.meter{display:flex;gap:3px;margin-top:10px}.meter i{flex:1;height:6px;border-radius:3px;background:var(--line)}.meter i.f{background:var(--navy)}.meter i.r{background:var(--red)}
+.tabs{display:flex;border-top:1px solid var(--line)}.tabs div{flex:1;text-align:center;padding:12px 0 14px;font-size:12px;color:var(--muted)}.tabs div.on{color:var(--navy);font-weight:700}
+.tabs div.on:before{content:"";display:block;width:6px;height:6px;background:var(--red);border-radius:50%;margin:0 auto 6px}.tabs div:not(.on):before{content:"";display:block;height:6px;margin-bottom:6px}
+.btn{display:block;border-radius:16px;padding:18px;font-size:17px;font-weight:700;color:#fff;background:var(--navy);margin-top:12px;text-align:center}
+.btn.red{background:var(--red)}.btn.line{background:#fff;color:var(--navy);border:2px solid var(--line)}
+.big{font-size:44px;font-weight:800;letter-spacing:-1px;margin:6px 0 0}
+.kv{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);font-size:16px}.kv span:first-child{color:var(--muted)}
+.stat{display:flex;gap:20px;margin:6px 0 10px}.stat b{display:block;font-size:34px;font-weight:800}.stat span{color:var(--muted);font-size:13px}
+.u{display:flex;justify-content:space-between;align-items:center;padding:15px 0;border-bottom:1px solid var(--line)}.u small{display:block;color:var(--muted)}
+.sw{width:44px;height:26px;background:var(--blue);border-radius:13px;position:relative}.sw:after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%}.sw.off{background:#cfd5dd}.sw.off:after{right:auto;left:3px}
+</style></head><body>
+<h1 class="t">Mockup 3 – Clean</h1><p class="s">Viel Weiß, Rot nur als Akzent, große Touch-Flächen</p>
+<div class="row">
+
+<div class="phone"><div class="top"><small>Hallo Thomas</small><h2>Fahrten</h2></div>
+<div class="body">
+<div class="item"><div class="tag">Interesse · Mitglieder</div><h3>Auswärtsspiel Augsburg</h3><div class="muted">Sa, 14. November · 11:00</div>
+<div class="meter"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i></div><div class="muted" style="margin-top:6px">32 Interessenten · 50 Plätze</div></div>
+<div class="item"><div class="tag b">Offene Buchung</div><h3>Auswärtsspiel Leipzig</h3><div class="muted">Sa, 5. Dezember · 06:30</div>
+<div class="meter"><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i></i><i></i></div><div class="muted" style="margin-top:6px">9 Plätze frei</div></div>
+<div class="item"><div class="tag g">Ausgebucht</div><h3>Auswärtsspiel Dortmund</h3><div class="muted">Sa, 19. Dezember · 07:00</div>
+<div class="meter"><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i><i class="r"></i></div><div class="muted" style="margin-top:6px">Warteliste: 4</div></div>
+</div>
+<div class="tabs"><div class="on">Fahrten</div><div>Buchungen</div><div>Profil</div><div>Admin</div></div></div>
+
+<div class="phone"><div class="top"><small>‹ Fahrten</small><h2>Augsburg</h2></div>
+<div class="body">
+<div class="tag">Phase 1 · Interesse</div><div class="big">1 Tag 6 Std</div><div class="muted">bis zur automatischen Vergabe</div>
+<div style="margin-top:14px"><div class="kv"><span>Abfahrt</span><span>Sa 14.11., 11:00</span></div><div class="kv"><span>Plätze</span><span>50</span></div><div class="kv"><span>Interessenten</span><span>32</span></div><div class="kv"><span>Deine Fahrten</span><span>17 (Rang 4)</span></div><div class="kv"><span>Preis</span><span>28 €</span></div></div>
+<div class="btn red">Interesse bekunden</div><div class="btn line">Zurückziehen</div>
+<p class="muted" style="margin-top:14px">Plätze werden nach bisherigen Fahrten vergeben. Danach dürfen alle Restplätze buchen.</p>
+</div>
+<div class="tabs"><div class="on">Fahrten</div><div>Buchungen</div><div>Profil</div><div>Admin</div></div></div>
+
+<div class="phone"><div class="top"><small>Admin</small><h2>Benutzer</h2></div>
+<div class="body">
+<div class="stat"><div><b>126</b><span>Benutzer</span></div><div><b>84</b><span>Mitglieder</span></div><div><b>3</b><span>Fahrten</span></div></div>
+<div class="u"><div>Max Huber<small>23 Fahrten</small></div><div class="sw"></div></div>
+<div class="u"><div>Anna Maier<small>17 Fahrten</small></div><div class="sw"></div></div>
+<div class="u"><div>Lukas Weiß<small>2 Fahrten</small></div><div class="sw off"></div></div>
+<div class="u"><div>Sophie Braun<small>9 Fahrten</small></div><div class="sw"></div></div>
+<div class="btn red">+ Neue Fahrt</div>
+</div>
+<div class="tabs"><div>Fahrten</div><div>Buchungen</div><div>Profil</div><div class="on">Admin</div></div></div>
+
+</div></body></html>

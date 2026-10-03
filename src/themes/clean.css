@@ -1,0 +1,55 @@
+/* Clean: viel Weiß, Rot nur als Akzent, flache Listen statt Kästen. */
+:root[data-theme='clean'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f4f6f9;
+  --border: #e6e9ee;
+  --fg: #0b1d3a;
+  --muted: #6b7686;
+  --primary: #dc052d;
+  --primary-hover: #b80425;
+  --on-primary: #ffffff;
+  --accent: #0066b2;
+  --accent-strong: #0b1d3a;
+  --ok: #1e9e5a;
+  --warn: #b77a00;
+  --focus: #0066b2;
+  --header-bg: transparent;
+  --header-fg: #0b1d3a;
+  --header-muted: #6b7686;
+  --tabbar-bg: #ffffff;
+  --tab-active-bg: transparent;
+  --tab-active-fg: #0b1d3a;
+  --badge-bg: #8d97a5;
+  --bar-track: #eceff3;
+  --bar-fill: #0b1d3a;
+  --bar-fill-full: #dc052d;
+  --highlight-border: #dc052d;
+  --radius: 16px;
+  --radius-sm: 14px;
+  --shadow: none;
+  --title-weight: 800;
+}
+
+:root[data-theme='clean'] .title::after {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 4px;
+  background: var(--primary);
+}
+:root[data-theme='clean'] .card.trip,
+:root[data-theme='clean'] .card.news,
+:root[data-theme='clean'] .card.note {
+  background: transparent;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  padding-inline: 0;
+}
+:root[data-theme='clean'] .card.hot { border-color: var(--border); box-shadow: none; }
+:root[data-theme='clean'] .card.hot .badge-red { background: var(--primary); }
+:root[data-theme='clean'] .tab.active b { filter: none; }
+:root[data-theme='clean'] .tab.active::before { content: ''; position: absolute; top: 4px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: var(--primary); }

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup 1 – Klassisch</title>
+<style>
+:root{--red:#DC052D;--blue:#0066B2;--navy:#0B1D3A;--bg:#F2F4F7;--card:#fff;--muted:#6B7686}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#dfe3e8;color:var(--navy)}
+h1.t{text-align:center;font-size:18px;margin:16px 0 4px}p.s{text-align:center;color:var(--muted);margin:0 0 16px;font-size:14px}
+.row{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;padding:0 16px 32px}
+.phone{width:390px;height:780px;background:var(--bg);border-radius:32px;border:8px solid #111;overflow:hidden;display:flex;flex-direction:column;position:relative}
+.hdr{background:var(--red);color:#fff;padding:18px 16px 14px}.hdr small{opacity:.85;font-size:12px}.hdr h2{margin:2px 0 0;font-size:20px}
+.body{flex:1;overflow:auto;padding:14px}
+.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{margin:0 0 4px;font-size:16px}.muted{color:var(--muted);font-size:13px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;color:#fff;background:var(--blue)}
+.badge.red{background:var(--red)}.badge.gray{background:#8d97a5}.badge.green{background:#1e9e5a}
+.bar{height:8px;background:#e3e7ec;border-radius:9px;overflow:hidden;margin:10px 0 4px}.bar i{display:block;height:100%;background:var(--blue)}
+.tabs{display:flex;background:#fff;border-top:1px solid #dde2e8}.tabs div{flex:1;text-align:center;padding:10px 0 12px;font-size:11px;color:var(--muted)}
+.tabs div.on{color:var(--red);font-weight:700}.tabs b{display:block;font-size:20px}
+.btn{display:block;width:100%;border:0;border-radius:10px;padding:14px;font-size:16px;font-weight:700;color:#fff;background:var(--red);margin-top:10px;text-align:center}
+.btn.blue{background:var(--blue)}.btn.ghost{background:#fff;color:var(--red);border:2px solid var(--red)}
+.step{display:flex;gap:10px;align-items:flex-start;margin:10px 0}.dot{width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;display:grid;place-items:center;flex:none}
+.dot.off{background:#c3cad4}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px 4px;border-bottom:1px solid #eef0f3;text-align:left}
+.kpi{display:flex;gap:8px;margin-bottom:12px}.kpi div{flex:1;background:#fff;border-radius:12px;padding:10px;text-align:center}.kpi b{display:block;font-size:22px;color:var(--red)}
+</style></head><body>
+<h1 class="t">Mockup 1 – Klassisch</h1><p class="s">Roter Header, weiße Karten, blaue Akzente, Tab-Leiste unten</p>
+<div class="row">
+
+<div class="phone"><div class="hdr"><small>Hallo Thomas · Mitglied</small><h2>Busfahrten</h2></div>
+<div class="body">
+<div class="card"><span class="badge red">Interesse (Mitglieder)</span><h3 style="margin-top:8px">Auswärtsspiel Augsburg</h3><div class="muted">Sa, 14.11. · Abfahrt 11:00 · 50 Plätze</div>
+<div class="bar"><i style="width:64%"></i></div><div class="muted">32 Interessenten · noch 1 Tag 6 Std.</div></div>
+<div class="card"><span class="badge">Offene Buchung</span><h3 style="margin-top:8px">Auswärtsspiel Leipzig</h3><div class="muted">Sa, 05.12. · Abfahrt 06:30 · 50 Plätze</div>
+<div class="bar"><i style="width:82%"></i></div><div class="muted">9 Plätze frei</div></div>
+<div class="card"><span class="badge gray">Warteliste</span><h3 style="margin-top:8px">Auswärtsspiel Dortmund</h3><div class="muted">Sa, 19.12. · Abfahrt 07:00 · 50 Plätze</div>
+<div class="bar"><i style="width:100%;background:var(--red)"></i></div><div class="muted">Ausgebucht · 4 auf der Warteliste</div></div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Meine Buchungen</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="hdr"><small>‹ Zurück</small><h2>Auswärtsspiel Augsburg</h2></div>
+<div class="body">
+<div class="card"><span class="badge red">Phase 1 · Interesse (Mitglieder)</span><div style="font-size:28px;font-weight:800;margin:8px 0 0">1 Tag 6 Std.</div><div class="muted">bis zur automatischen Platzvergabe</div>
+<div class="step"><div class="dot">1</div><div><b>Interesse bekunden</b><div class="muted">3 Tage, nur Mitglieder</div></div></div>
+<div class="step"><div class="dot off">2</div><div><b>Vergabe nach Fahrten</b><div class="muted">Meiste bisherige Fahrten zuerst</div></div></div>
+<div class="step"><div class="dot off">3</div><div><b>Offene Buchung</b><div class="muted">Restplätze für alle</div></div></div></div>
+<div class="card"><h3>Deine Position</h3><div class="muted">Du hast 17 bisherige Fahrten – aktuell Rang <b>4 von 32</b>. Bei 50 Plätzen bist du sicher dabei.</div></div>
+<div class="card"><h3>Details</h3><div class="muted">Abfahrt: Sa, 14.11., 11:00 Uhr<br>Ort: Parkplatz Stadion<br>Preis: 28 € pro Person</div></div>
+<div class="btn">Interesse bekunden</div><div class="btn ghost">Interesse zurückziehen</div>
+</div>
+<div class="tabs"><div class="on"><b>🚌</b>Fahrten</div><div><b>🎫</b>Meine Buchungen</div><div><b>👤</b>Profil</div><div><b>⚙️</b>Admin</div></div></div>
+
+<div class="phone"><div class="hdr"><small>Admin</small><h2>Übersicht</h2></div>
+<div class="body">
+<div class="kpi"><div><b>3</b><span class="muted">Fahrten</span></div><div><b>126</b><span class="muted">Benutzer</span></div><div><b>84</b><span class="muted">Mitglieder</span></div></div>
+<div class="btn blue" style="margin:0 0 12px">+ Neue Fahrt erstellen</div>
+<div class="card"><h3>Benutzer</h3><table><tr><th>Name</th><th>Fahrten</th><th>Status</th></tr>
+<tr><td>Max Huber</td><td>23</td><td><span class="badge green">Mitglied</span></td></tr>
+<tr><td>Anna Maier</td><td>17</td><td><span class="badge green">Mitglied</span></td></tr>
+<tr><td>Lukas Weiß</td><td>2</td><td><span class="badge gray">Gast</span></td></tr>
+<tr><td>Sophie Braun</td><td>9</td><td><span class="badge green">Mitglied</span></td></tr></table></div>
+<div class="card"><h3>Nächste Fahrt</h3><div class="muted">Augsburg · 32 Interessenten · Vergabe in 1 Tag 6 Std.</div></div>
+</div>
+<div class="tabs"><div><b>🚌</b>Fahrten</div><div><b>🎫</b>Meine Buchungen</div><div><b>👤</b>Profil</div><div class="on"><b>⚙️</b>Admin</div></div></div>
+
+</div></body></html>

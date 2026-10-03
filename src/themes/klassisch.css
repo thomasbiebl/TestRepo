@@ -1,0 +1,32 @@
+:root[data-theme='klassisch'] {
+  color-scheme: light;
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --surface-2: #f2f4f7;
+  --border: #dde2e8;
+  --fg: #0b1d3a;
+  --muted: #5d6879;
+  --primary: #dc052d;
+  --primary-hover: #b80425;
+  --on-primary: #ffffff;
+  --accent: #0066b2;
+  --accent-strong: #0066b2;
+  --ok: #1e9e5a;
+  --warn: #b77a00;
+  --focus: #0066b2;
+  --header-bg: #dc052d;
+  --header-fg: #ffffff;
+  --header-muted: rgba(255, 255, 255, 0.85);
+  --tabbar-bg: #ffffff;
+  --tab-active-bg: transparent;
+  --tab-active-fg: #dc052d;
+  --badge-bg: #8d97a5;
+  --bar-track: #e3e7ec;
+  --bar-fill: #0066b2;
+  --bar-fill-full: #dc052d;
+  --highlight-border: #dc052d;
+  --radius: 12px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --title-weight: 700;
+}
