@@ -150,3 +150,5 @@ a.chip { text-decoration: none; display: inline-block; }
 .bell .count { position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--primary); color: var(--on-primary); font: 700 11px/18px system-ui, sans-serif; text-align: center; font-style: normal; }
 a.note h3, article.note h3 { font-size: 16px; }
 .social { display: flex; flex-direction: column; gap: 10px; }
+
+.errortext { margin: 0; padding: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); font: 12px/1.4 ui-monospace, monospace; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }

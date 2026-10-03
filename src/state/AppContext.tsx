@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { AuthService } from '../auth/AuthService';
 import type { DataService, Result } from '../data/DataService';
 import type { Snapshot, User } from '../domain/types';
+import { Loading } from '../components/Loading';
+import { RecoveryButtons } from '../components/RecoveryButtons';
 import { createServices, type Services } from '../services';
 
 interface AppCtx {
@@ -43,8 +45,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  if (failed) return <p className="loading">Die App konnte nicht gestartet werden. Bitte lade die Seite neu.</p>;
-  if (!boot) return <p className="loading">Lädt …</p>;
+  if (failed) {
+    return (
+      <div className="auth">
+        <div className="auth-box">
+          <h1 className="title">Die App konnte nicht starten</h1>
+          <p className="muted">Eine Programmdatei konnte nicht geladen werden, oft wegen einer veralteten Version im Zwischenspeicher.</p>
+          <RecoveryButtons />
+        </div>
+      </div>
+    );
+  }
+  if (!boot) return <Loading />;
   return <AppState services={boot.services} initialUserId={boot.userId}>{children}</AppState>;
 }
 
